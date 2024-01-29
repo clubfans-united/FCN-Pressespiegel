@@ -1,0 +1,137 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+    pull_request:
+      branches:
+        - main
+    tags:
+      - '*'
+
+jobs:
+  phpcs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - name: Install dependencies
+        run: composer install
+
+      - name: Run PHPCS
+        run: vendor/bin/phpcs
+
+  eslint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: ESLint
+        run: npm run eslint
+
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [phpcs, eslint]
+    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: NPM Build
+        run: npm run build  # Replace with your npm build script
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - name: Composer Install
+        run: composer install --no-dev --no-suggest --optimize-autoloader --no-interaction
+
+      - name: Remove unwanted files
+        run: |
+          find . -type f -name "phpcs.xml" -exec rm -f {} +
+          find . -type f -name ".gitignore" -exec rm -f {} +
+          find . -type f -name "webpack.config.js" -exec rm -f {} +
+          find . -type d -name "node_modules" -exec rm -rf {} +
+          find . -type d -name ".github" -exec rm -rf {} +
+          find . -type d -name ".git" -exec rm -rf {} +
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: build
+          path: |
+            .
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: |
+            Release ${{ github.ref }}
+
+      - name: Download build
+        uses: actions/download-artifact@v2
+        with:
+          name: build
+          path: release-artifact
+
+      - name: Set Version in PHP File
+        run: |
+          cd release-artifact
+          sed -i "s/Version:.*$/Version: ${{ github.ref_name }}/" fcn-pressespiegel.php
+        shell: bash
+
+      - name: Zip Repository
+        run: |
+          cd release-artifact
+          echo ${{ github.ref_name }}
+          zip -r fcn-pressespiegel-${{ github.ref_name }}.zip .
+        shell: bash
+
+
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./release-artifact/fcn-pressespiegel-${{ github.ref_name }}.zip
+          asset_name: fcn-pressespiegel-${{ github.ref_name }}.zip
+          asset_content_type: application/zip
