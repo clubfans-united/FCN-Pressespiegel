@@ -232,17 +232,13 @@ class PressreviewManager
     {
         $sources = [];
         $sources[] = new PressreviewSource(
-            'https://www.bild.de/rssfeeds/vw-sport-fussball-mix/vw-sport-fussball-mix-16733208,dzbildplus=true,sort=1,teaserbildmobil=false,view=rss2.bild.xml',
-            new PressreviewSourceFilter('category', '1.FC Nürnberg'),
+            'https://www.bild.de/feed/nuernberg.xml'
         );
         $sources[] = new PressreviewSource(
-            'https://www.nordbayern.de/cmlink/15.712?cid=2.265&lpid=1.318243&lpagetype=ZGVwYXJ0bWVudC5jYXRlZ29yeWRpbWVuc2lvbi50YWcuQ2x1Yg==&hostprefix=https%3A%2F%2Fwww.nordbayern.de',
+            'https://www.nordbayern.de/sport/1-fc-nuernberg?isRss=true',
         );
         $sources[] = new PressreviewSource(
             'http://rss.kicker.de/team/1fcnuernberg',
-        );
-        $sources[] = new PressreviewSource(
-            'https://www.br.de/themen/sport/inhalt/fussball/2-bundesliga/1-fc-nuernberg/1-fc-nuernberg-uebersicht-100~rss.xml',
         );
         $sources[] = new PressreviewSource(
             'https://www.n-town.de/glubbblog/index.php/feed',
@@ -258,6 +254,8 @@ class PressreviewManager
             'https://www.youtube.com/feeds/videos.xml?channel_id=UCRFsyeKu07-LnHDG44O6uCA',
             new PressreviewSourceFilter('textContent', '#1FCNürnberg'),
         );
+        $sources[] = new PressreviewSource('https://clubfokus.de/feed/');
+
         return $sources;
     }
 }
