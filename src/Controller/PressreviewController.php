@@ -3,8 +3,11 @@
 namespace FCNPressespiegel\Controller;
 
 use FCNPressespiegel\Commands\PressreviewCommand;
+use FCNPressespiegel\Enum\Option;
 use FCNPressespiegel\Enum\PostType;
 use FCNPressespiegel\Enum\PressreviewMeta;
+use FCNPressespiegel\Manager\PressreviewManager;
+use WP_CLI;
 use WP_Query;
 
 class PressreviewController
@@ -19,16 +22,64 @@ class PressreviewController
         add_filter('post_type_link', $this->pressreviewLink(...), 99, 2);
         add_filter('posts_where', $this->whereNotOlderThan(...), 10, 2);
         add_filter('query_vars', $this->addQueryVars(...));
-        add_filter('wpseo_sitemap_exclude_post_type', $this->excludeFromSitemap(...), 10, 2,);
+        add_filter('wpseo_sitemap_exclude_post_type', $this->excludeFromSitemap(...), 10, 2);
+        add_action('admin_enqueue_scripts', $this->enqueueScripts(...));
+        add_action('wp_ajax_fcnp_import', $this->import(...));
 
         if (class_exists('WP_CLI')) {
-            \WP_CLI::add_command('pressreview', PressreviewCommand::class);
+            WP_CLI::add_command('pressreview', PressreviewCommand::class);
         }
+    }
+
+    private function enqueueScripts($hook): void
+    {
+        if ($hook !== 'edit.php') {
+            return;
+        }
+
+        global $typenow;
+
+        if ($typenow !== PostType::PRESSREVIEW) {
+            return;
+        }
+
+        $assets = FCNP_PLUGIN_DIR . 'dist/wp/pressreview-edit.asset.php';
+
+        if (file_exists($assets)) {
+            $assets = include $assets;
+        } else {
+            $assets = ['dependencies' => [], 'version' => time()];
+        }
+
+        wp_enqueue_script(
+            'pressreview-edit',
+            FCNP_PLUGIN_URL . 'dist/wp/pressreview-edit.js',
+            $assets['dependencies'],
+            $assets['version'],
+        );
+
+        wp_localize_script('pressreview-edit', 'pressreviewEdit', [
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'ajaxNonce' => wp_create_nonce('fcnp_import'),
+        ]);
+    }
+
+    private function addButton($views): array
+    {
+        if (!current_user_can('manage_options')) {
+            return $views;
+        }
+
+        $url = admin_url('admin.php?action=custom_pressreview_action');
+        $button = '<a href="' . esc_url($url) . '" class="page-title-action">Custom Button</a>';
+
+        echo $button;
+
+        return $views;
     }
 
     private function registerPostType(): void
     {
-        $show_ui = current_user_can('manage_options');
 
         $posttype_args = [
             'public' => true,
@@ -38,7 +89,7 @@ class PressreviewController
             'menu_icon' => 'dashicons-media-document',
             'has_archive' => true,
             'taxonomies' => ['post_tag'],
-            'show_ui' => $show_ui,
+            'show_ui' => true,
             'labels' => [
                 'name' => 'Pressespiegel',
                 'all_items' => 'Presseartikel',
@@ -52,6 +103,7 @@ class PressreviewController
                 'not_found' => 'Kein Presseartikel gefunden',
             ],
         ];
+
 
         register_post_type(PostType::PRESSREVIEW, $posttype_args);
     }
@@ -88,8 +140,10 @@ class PressreviewController
             return $where;
         }
 
+        $hideOlderThenDays = get_option(Option::HIDE_OLDER_THEN_DAYS->value, 9);
+
         $where .=
-            " AND post_date > '" . date('Y-m-d', strtotime('-9 days')) . "'";
+            " AND post_date > '" . date('Y-m-d', strtotime("-$hideOlderThenDays days")) . "'";
 
         return $where;
     }
@@ -142,7 +196,19 @@ class PressreviewController
     private function addQueryVars(array $query_vars): array
     {
         $query_vars[] = 'fcnp-action';
-
         return $query_vars;
+    }
+
+    private function import(): void
+    {
+
+        if (!wp_verify_nonce($_GET['_ajax_nonce'], 'fcnp_import')) {
+            wp_send_json_error('Invalid nonce');
+        }
+
+        $pressreviewManager = new PressreviewManager();
+        $importResult = $pressreviewManager->import();
+        wp_send_json_success($importResult);
+        ;
     }
 }

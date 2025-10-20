@@ -4,27 +4,17 @@ namespace FCNPressespiegel\Commands;
 
 use FCNPressespiegel\Enum\PressreviewMeta;
 use FCNPressespiegel\Manager\PressreviewManager;
+use WP_CLI;
+use WP_CLI_Command;
 
-class PressreviewCommand
+class PressreviewCommand extends WP_CLI_Command
 {
-    /**
-     * List Pressreview Items
-     *
-     * ## EXAMPLES
-     *
-     *     wp pressreview list
-     *
-     * @when after_init
-     */
-    public function list(): void
+    private PressreviewManager $pressreviewManager;
+
+    public function __construct()
     {
-        \WP_CLI::line('Pressreview Items');
-
-        $pressreviewItems = PressreviewManager::getPressreviewItems();
-
-        foreach ($pressreviewItems as $pressreviewItem) {
-            \WP_CLI::line($pressreviewItem->getDisplayTitle());
-        }
+        parent::__construct();
+        $this->pressreviewManager = new PressreviewManager();
     }
 
     /**
@@ -38,16 +28,16 @@ class PressreviewCommand
      */
     public function import(): void
     {
-        \WP_CLI::line('Import Pressreview Items');
+        WP_CLI::line('Import Pressreview Items');
 
-        $pressreviewPosts = PressreviewManager::doPressreviewAutoImport();
+        $posts = $this->pressreviewManager->import();
 
-        foreach ($pressreviewPosts as $pressreviewPost) {
-            \WP_CLI::line($pressreviewPost->getPost()->post_title);
-            \WP_CLI::line(get_post_meta($pressreviewPost->getPost()->ID, PressreviewMeta::PRESSREVIEW_URL, true));
-            \WP_CLI::line('------------------------------------------------------------------');
+        foreach ($posts as $post) {
+            WP_CLI::line($post->getPost()->post_title);
+            WP_CLI::line(get_post_meta($post->getPost()->ID, PressreviewMeta::PRESSREVIEW_URL, true));
+            WP_CLI::line('------------------------------------------------------------------');
         }
 
-        \WP_CLI::line('Imported ' . count($pressreviewPosts) . ' Pressreview Items');
+        WP_CLI::line('Imported ' . count($posts) . ' Pressreview Items');
     }
 }

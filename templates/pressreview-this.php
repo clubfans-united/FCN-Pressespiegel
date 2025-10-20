@@ -12,7 +12,7 @@ define('DONOTCACHEPAGE', true);
 </head>
 <body>
 
-<div id="cu-pressreview-this" class="container">
+<div id="fcnp-pressreview-this" class="container">
 
 </div>
 <?php wp_footer(); ?>

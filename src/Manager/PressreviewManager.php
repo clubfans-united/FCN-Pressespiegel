@@ -6,24 +6,136 @@ use Carbon\Carbon;
 use FCNPressespiegel\Enum\PostType;
 use FCNPressespiegel\Enum\PressreviewMeta;
 use FCNPressespiegel\Exceptions\DuplicatePressreviewPostException;
-use FCNPressespiegel\Factories\PressreviewItemFactory;
-use FCNPressespiegel\Models\PressreviewItem;
-use FCNPressespiegel\Models\PressreviewSource;
-use FCNPressespiegel\Models\PressreviewSourceFilter;
+use FCNPressespiegel\Exceptions\InvalidPostTypeException;
+use FCNPressespiegel\Exceptions\PostNotFoundException;
+use FCNPressespiegel\Factories\ArticleFactory;
+use FCNPressespiegel\Models\Article;
+use FCNPressespiegel\Models\ImportResult;
+use FCNPressespiegel\Models\Source;
 use FCNPressespiegel\Posts\Pressreview;
 use Exception;
 use Laminas\Feed\Reader\Reader;
-use Ozh\Bookmarkletgen\Bookmarkletgen;
+use SimplePie\Item;
 use WP_Query;
 
 class PressreviewManager
 {
-    /**
-     * @param string $url
-     * @return bool
-     */
-    private static function itemExists(string $url): bool
+    public function import(): ImportResult
     {
+
+        $tease = fn(string $text, int $length) => mb_substr($text, 0, $length) . (mb_strlen($text) > $length ? '...' : '');
+        $sources = $this->getSources();
+        $feedErrors = [];
+        $articles = [];
+        $articleErrors = [];
+
+        foreach ($sources as $source) {
+            try {
+                $feedResponse = wp_remote_get($source->getUrl());
+
+                if (is_wp_error($feedResponse)) {
+                    throw new Exception($feedResponse->get_error_message());
+                }
+
+                $feedData = wp_remote_retrieve_body($feedResponse);
+                $feed = Reader::importString($feedData);
+
+                foreach ($feed as $item) {
+                    if (in_array($item->getLink(), array_map(fn(Article $article) => $article->getUrl(), $articles))) {
+                        continue;
+                    }
+
+                    if ($this->articleExists($item->getLink())) {
+                        continue;
+                    }
+
+                    $timestampAgo = Carbon::now()->subHours(24)->getTimestamp();
+                    $timestampEntry = $item->getDateCreated()?->getTimestamp() ?? 0;
+
+                    if ($timestampEntry < $timestampAgo) {
+                        continue;
+                    }
+
+                    if ($source->getFilter() !== null && !call_user_func($source->getFilter(), $item)) {
+                        continue;
+                    }
+
+                    $dateCreated = Carbon::createFromTimestamp($timestampEntry);
+
+                    $articles[] = ArticleFactory::create(
+                        $item->getTitle(),
+                        $item->getLink(),
+                        '',
+                        $dateCreated,
+                    );
+                }
+            } catch (Exception $exception) {
+                do_action('fcnp_feed_exception', $exception);
+                $feedErrors[$source->getUrl()] = $exception->getMessage();
+                error_log($exception->getMessage());
+                continue;
+            }
+        }
+
+        foreach ($articles as $article) {
+            try {
+                $postData = [
+                    'comment_status' => 'closed',
+                    'post_title' => $article->getDisplayTitle(),
+                    'post_content' => '',
+                    'post_status' => 'publish',
+                    'ping_status' => 'closed',
+                    'post_type' => PostType::PRESSREVIEW,
+                    'post_date' => $article->getCreated()->format('Y-m-d H:i:s'),
+                ];
+
+                $postId = wp_insert_post($postData);
+
+                update_post_meta($postId, PressreviewMeta::PRESSREVIEW_URL, $article->getUrl());
+            } catch (Exception $e) {
+                $articleErrors[$article->getUrl()] = $e->getMessage();
+            }
+        }
+
+        return new ImportResult($articles, $feedErrors, $articleErrors);
+    }
+
+    /**
+     * @throws PostNotFoundException
+     * @throws InvalidPostTypeException|DuplicatePressreviewPostException
+     */
+    public function importArticle(Article $article, array $tags = []): Pressreview
+    {
+        if ($this->articleExists($article->getUrl())) {
+            throw new DuplicatePressreviewPostException();
+        }
+
+        $postData = [
+            'comment_status' => 'closed',
+            'post_title' => $article->getDisplayTitle(),
+            'post_content' => $article->getExcerpt(),
+            'post_status' => 'publish',
+            'ping_status' => 'closed',
+            'post_type' => PostType::PRESSREVIEW,
+            'post_date' => $article->getCreated()->format('Y-m-d H:i:s'),
+        ];
+
+        $postId = wp_insert_post($postData);
+        wp_set_object_terms($postId, $tags, 'post_tag');
+        update_post_meta($postId, PressreviewMeta::PRESSREVIEW_URL, $article->getUrl());
+
+        return Pressreview::createFromPostId($postId);
+    }
+
+    private function articleExists(string $url): bool
+    {
+        $key = 'fcnp_article_exists_' . md5($url);
+        $exists = wp_cache_get($key, 'fcnp');
+
+        if ($exists) {
+            return $exists === '1';
+        }
+
         $url = trim($url);
         $query = new WP_Query([
             'post_type' => PostType::PRESSREVIEW,
@@ -31,230 +143,32 @@ class PressreviewManager
             'meta_key' => PressreviewMeta::PRESSREVIEW_URL,
             'meta_value' => $url,
         ]);
+
+        wp_cache_set($key, $query->found_posts > 0 ? '1' : '0', 'fcnp');
+
         return $query->found_posts > 0;
     }
 
     /**
-     * @param string $title
-     * @param string $description
-     * @param string $url
-     * @param array $tags
-     *
-     * @return Pressreview
-     * @throws DuplicatePressreviewPostException
+     * @return Source[]
      */
-    public static function addPressreviewItem(
-        string $title,
-        string $description,
-        string $url,
-        array $tags
-    ): Pressreview {
-        if (self::itemExists($url)) {
-            throw new DuplicatePressreviewPostException();
-        }
-
-        $post_array = [
-            'comment_status' => 'closed',
-            'post_title' => $title,
-            'post_content' => $description,
-            'post_status' => 'publish',
-            'ping_status' => 'closed',
-            'post_type' => PostType::PRESSREVIEW,
-        ];
-        $post_id = wp_insert_post($post_array);
-        wp_set_object_terms($post_id, $tags, 'post_tag');
-        update_post_meta($post_id, PressreviewMeta::PRESSREVIEW_URL, $url);
-
-        return Pressreview::createFromPostId($post_id);
-    }
-
-    /**
-     * @return string
-     */
-    public static function getBookmarkletLink(): string
-    {
-        $bookmarklet_gen = new Bookmarkletgen();
-        $js_template_content = self::getBookmarkletJavascript();
-        return $bookmarklet_gen->crunch($js_template_content);
-    }
-
-    /**
-     * @return string
-     */
-    public static function getBookmarkletJavascript(): string
-    {
-        $js_template_path =
-            FCNP_PLUGIN_DIR . '/templates/pressreview-bookmarklet.js';
-        $js_template_content = file_get_contents($js_template_path);
-        $url = str_replace('/', '\/', self::getPressreviewAddUrl());
-        $js_template_content = str_replace(
-            '###url###',
-            $url,
-            $js_template_content,
-        );
-        return $js_template_content;
-    }
-
-    public static function getPressreviewAddUrl(): string
-    {
-        return home_url('pressreview_this');
-    }
-
-    /**
-     * @return Pressreview[]
-     */
-    public static function doPressreviewAutoImport(): array
-    {
-        $pressreviewItems = self::getPressreviewItems();
-        $importedPressreviews = [];
-        foreach ($pressreviewItems as $pressreviewItem) {
-            /* @var PressreviewItem $pressreviewItem */
-            try {
-                $importedPressreviews[] = self::addPressreviewItem(
-                    $pressreviewItem->getDisplayTitle(),
-                    '',
-                    $pressreviewItem->getUrl(),
-                    [],
-                );
-            } catch (DuplicatePressreviewPostException $e) {
-                continue;
-            } catch (Exception $e) {
-                do_action('fcnp_autoimport_exception', $e);
-                error_log($e->getMessage());
-                continue;
-            }
-        }
-
-        return $importedPressreviews;
-    }
-
-    /**
-     * @return PressreviewItem[]
-     */
-    public static function getPressreviewItems(): array
-    {
-
-        $tease = fn(string $text, int $length) => mb_substr($text, 0, $length) . (mb_strlen($text) > $length ? '...' : '');
-
-        $sources = self::getPressreviewSources();
-        $pressreviewItems = [];
-        foreach ($sources as $source) {
-            try {
-                $feed = Reader::import($source->getUrl());
-            } catch (Exception $exception) {
-                /** @noinspection ForgottenDebugOutputInspection */
-                do_action('fcnp_feed_exception', $exception);
-                error_log($exception->getMessage());
-                continue;
-            }
-
-            foreach ($feed as $entry) {
-                /* @var $entry \Laminas\Feed\Reader\Entry\Rss */
-                $dateCreated = $entry->getDateCreated() ?? Carbon::now();
-
-                if (!self::itemExists($entry->getLink())) {
-                    if ($source->getFilter() !== null) {
-                        $contains = $source->getFilter()->getContains();
-                        switch ($source->getFilter()->getField()) {
-                            case 'textContent':
-                                $content = $entry->getElement()->textContent;
-
-                                break;
-                            case 'category':
-                                $content = implode(
-                                    ' ',
-                                    $entry->getCategories()->getValues(),
-                                );
-
-                                break;
-                            default:
-                                $content = '';
-                        }
-
-                        if (str_contains($content, $contains)) {
-                            $pressreviewItems[] = PressreviewItemFactory::create(
-                                $entry->getTitle(),
-                                $entry->getLink(),
-                                $tease($entry->getContent(), 300),
-                                $dateCreated,
-                            );
-                        }
-                    } else {
-                        $pressreviewItems[] = PressreviewItemFactory::create(
-                            $entry->getTitle(),
-                            $entry->getLink(),
-                            $tease($entry->getContent(), 300),
-                            $dateCreated,
-                        );
-                    }
-                }
-            }
-        }
-
-        $pressreviewUrls = array_unique(array_map(static function (PressreviewItem $item) {
-            return $item->getUrl();
-        }, $pressreviewItems));
-
-
-        $pressreviewItems = array_filter(
-            $pressreviewItems,
-            static function (PressreviewItem $item) use ($pressreviewUrls) {
-                return in_array($item->getUrl(), $pressreviewUrls, true);
-            }
-        );
-
-
-        usort($pressreviewItems, static function (PressreviewItem $a, PressreviewItem $b) {
-            if ($a->getCreated()->getTimestamp() === $b->getCreated()->getTimestamp()) {
-                return 0;
-            }
-            return ($a->getCreated()->getTimestamp() > $b->getCreated()->getTimestamp()) ? -1 : 1;
-        });
-
-        $pressreviewItems = array_filter(
-            $pressreviewItems,
-            static function (PressreviewItem $item) {
-                $timestampAgo = Carbon::now()
-                    ->subHours(18)
-                    ->getTimestamp();
-                return $item->getCreated()->getTimestamp() > $timestampAgo;
-            }
-        );
-
-        return $pressreviewItems;
-    }
-
-    /**
-     * @return PressreviewSource[]
-     */
-    private static function getPressreviewSources(): array
+    private function getSources(): array
     {
         $sources = [];
-        $sources[] = new PressreviewSource(
-            'https://www.bild.de/feed/nuernberg.xml'
-        );
-        $sources[] = new PressreviewSource(
-            'https://www.nordbayern.de/sport/1-fc-nuernberg?isRss=true',
-        );
-        $sources[] = new PressreviewSource(
-            'http://rss.kicker.de/team/1fcnuernberg',
-        );
-        $sources[] = new PressreviewSource(
-            'https://www.n-town.de/glubbblog/index.php/feed',
-        );
-        $sources[] = new PressreviewSource('http://www.fcn.de/rss.xml');
-        $sources[] = new PressreviewSource(
-            'https://www.youtube.com/feeds/videos.xml?channel_id=UCFWLmp622TIINSPFiv1ivsQ',
-        );
-        $sources[] = new PressreviewSource(
-            'https://www.frankenfernsehen.tv/mediathek/kategorie/sport/1-fc-nuernberg/feed/',
-        );
-        $sources[] = new PressreviewSource(
+        $sources[] = new Source('https://www.frankenfernsehen.tv/mediathek/kategorie/sport/1-fc-nuernberg/feed/');
+        $sources[] = new Source('https://www.bild.de/feed/nuernberg.xml');
+        $sources[] = new Source('https://www.nordbayern.de/sport/1-fc-nuernberg?isRss=true');
+        $sources[] = new Source('https://rss.kicker.de/team/1fcnuernberg');
+        $sources[] = new Source('https://www.n-town.de/glubbblog/index.php/feed');
+        $sources[] = new Source('https://www.fcn.de/rss.xml');
+        $sources[] = new Source('https://www.youtube.com/feeds/videos.xml?channel_id=UCFWLmp622TIINSPFiv1ivsQ');
+        $sources[] = new Source('https://www.youtube.com/feeds/videos.xml?channel_id=UCRFsyeKu07-LnHDG44O6uCA');
+        $sources[] = new Source('https://clubfokus.de/feed/');
+        $sources[] = new Source(
             'https://www.youtube.com/feeds/videos.xml?channel_id=UCRFsyeKu07-LnHDG44O6uCA',
-            new PressreviewSourceFilter('textContent', '#1FCNürnberg'),
+            fn(Item $item) => str_contains($item->get_content() ?? '', '#1FCNürnberg')
         );
-        $sources[] = new PressreviewSource('https://clubfokus.de/feed/');
 
-        return $sources;
+        return apply_filters('fcnp_sources', $sources);
     }
 }

@@ -2,16 +2,14 @@
 
 namespace FCNPressespiegel\Models;
 
-class PressreviewSource
+class Source
 {
     private string $url;
 
-    private ?PressreviewSourceFilter $filter;
+    private $filter;
 
-    public function __construct(
-        string $url,
-        PressreviewSourceFilter $filter = null
-    ) {
+    public function __construct(string $url, ?callable $filter = null)
+    {
         $this->url = $url;
         $this->filter = $filter;
     }
@@ -21,7 +19,7 @@ class PressreviewSource
         return $this->url;
     }
 
-    public function getFilter(): ?PressreviewSourceFilter
+    public function getFilter(): ?callable
     {
         return $this->filter;
     }

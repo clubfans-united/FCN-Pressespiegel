@@ -2,12 +2,11 @@
 
 namespace FCNPressespiegel\Enum;
 
-use MyCLabs\Enum\Enum;
-
 enum Action : string
 {
     case PRESSREVIEW_THIS_SHOW = 'fcnp_pressreview_this_show';
 
+    case IMPORT = 'fcnp_import';
     public static function getCurrentAction(bool $is_query_var = false): ?Action
     {
         if ($is_query_var) {
