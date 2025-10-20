@@ -11,7 +11,6 @@ class PressreviewAutoImportCronjob extends CronJob
     public function execute(): void
     {
         $cronjobEnabled = get_option('_fcnp_cronjob_enabled') === '1';
-        ;
 
         if (!$cronjobEnabled) {
             return;

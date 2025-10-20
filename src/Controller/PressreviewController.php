@@ -5,8 +5,6 @@ namespace FCNPressespiegel\Controller;
 use FCNPressespiegel\Commands\PressreviewCommand;
 use FCNPressespiegel\Enum\PostType;
 use FCNPressespiegel\Enum\PressreviewMeta;
-use Rockschtar\WordPress\Settings\Fields\CheckBox;
-use Rockschtar\WordPress\Settings\Models\SettingsPage;
 use WP_Query;
 
 class PressreviewController
@@ -18,16 +16,10 @@ class PressreviewController
         add_action('init', $this->registerPostType(...));
         add_action('template_redirect', $this->redirectToUrl(...));
         add_action('pre_get_posts', $this->postsPerPage(...));
-        add_action('rswp_create_settings', $this->createSettings(...));
         add_filter('post_type_link', $this->pressreviewLink(...), 99, 2);
         add_filter('posts_where', $this->whereNotOlderThan(...), 10, 2);
         add_filter('query_vars', $this->addQueryVars(...));
-        add_filter(
-            'wpseo_sitemap_exclude_post_type',
-            $this->excludeFromSitemap(...),
-            10,
-            2,
-        );
+        add_filter('wpseo_sitemap_exclude_post_type', $this->excludeFromSitemap(...), 10, 2,);
 
         if (class_exists('WP_CLI')) {
             \WP_CLI::add_command('pressreview', PressreviewCommand::class);
@@ -152,24 +144,5 @@ class PressreviewController
         $query_vars[] = 'fcnp-action';
 
         return $query_vars;
-    }
-
-    private function createSettings(): void
-    {
-        $page = SettingsPage::create('fcn-pressespiegel-settings')
-            ->setParent('edit.php?post_type=' . PostType::PRESSREVIEW)
-            ->setMenuTitle(__('Einstellungen', 'fcn-pressespiegel'))
-            ->setPageTitle(__('Pressespiegel Einstellungen', 'fcn-pressespiegel'));
-
-
-        $cronjobEnabledCheckbox = CheckBox::create('_fcnp_cronjob_enabled', 'pressreview-bookmarklet')
-            ->setLabel(__('Automatisch importieren', 'fcn-pressespiegel'))
-            ->setDescription(__('Aktiviere diese Option, um den Artikel automatisch zu importieren.', 'fcn-pressespiegel'))
-            ->setValue('1')
-            ->setDefaultOption('1');
-
-        $page->addField($cronjobEnabledCheckbox);
-
-        rswp_register_settings_page($page);
     }
 }

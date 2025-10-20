@@ -8,7 +8,7 @@
  * Author URI:      https://github.com/rockschtar
  * Version:         develop
  * Requires at least: 6.4
- * Requires PHP:      8.2
+ * Requires PHP:      8.3
  *
  */
 
