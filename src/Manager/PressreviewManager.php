@@ -73,7 +73,6 @@ class PressreviewManager
      */
     public static function getBookmarkletLink(): string
     {
-        !
         $bookmarklet_gen = new Bookmarkletgen();
         $js_template_content = self::getBookmarkletJavascript();
         return $bookmarklet_gen->crunch($js_template_content);
@@ -120,7 +119,8 @@ class PressreviewManager
             } catch (DuplicatePressreviewPostException $e) {
                 continue;
             } catch (Exception $e) {
-                //TODO capture exception to your favorite error tracking tool
+                do_action('fcnp_autoimport_exception', $e);
+                error_log($e->getMessage());
                 continue;
             }
         }
@@ -133,6 +133,9 @@ class PressreviewManager
      */
     public static function getPressreviewItems(): array
     {
+
+        $tease = fn(string $text, int $length) => mb_substr($text, 0, $length) . (mb_strlen($text) > $length ? '...' : '');
+
         $sources = self::getPressreviewSources();
         $pressreviewItems = [];
         foreach ($sources as $source) {
@@ -140,7 +143,7 @@ class PressreviewManager
                 $feed = Reader::import($source->getUrl());
             } catch (Exception $exception) {
                 /** @noinspection ForgottenDebugOutputInspection */
-                //TODO capture exception to your favorite error tracking tool
+                do_action('fcnp_feed_exception', $exception);
                 error_log($exception->getMessage());
                 continue;
             }
@@ -168,15 +171,11 @@ class PressreviewManager
                                 $content = '';
                         }
 
-                        if (
-                            string($content)->contains(
-                                $source->getFilter()->getContains(),
-                            )
-                        ) {
+                        if (str_contains($content, $contains)) {
                             $pressreviewItems[] = PressreviewItemFactory::create(
                                 $entry->getTitle(),
                                 $entry->getLink(),
-                                string($entry->getContent())->tease(300),
+                                $tease($entry->getContent(), 300),
                                 $dateCreated,
                             );
                         }
@@ -184,7 +183,7 @@ class PressreviewManager
                         $pressreviewItems[] = PressreviewItemFactory::create(
                             $entry->getTitle(),
                             $entry->getLink(),
-                            string($entry->getContent())->tease(300),
+                            $tease($entry->getContent(), 300),
                             $dateCreated,
                         );
                     }
