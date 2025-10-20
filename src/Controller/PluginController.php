@@ -2,6 +2,8 @@
 
 namespace FCNPressespiegel\Controller;
 
+use FCNPressespiegel\Cronjobs\PressreviewAutoImportCronjob;
+
 class PluginController
 {
     use Controller;
@@ -11,5 +13,6 @@ class PluginController
         PressreviewBookmarkletController::init();
         PressreviewController::init();
         SettingsController::init();
+        PressreviewAutoImportCronjob::init();
     }
 }
