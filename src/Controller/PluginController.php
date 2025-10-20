@@ -11,6 +11,5 @@ class PluginController
         PressreviewBookmarkletController::init();
         PressreviewController::init();
         SettingsController::init();
-        AutoImportController::init();
     }
 }
