@@ -3,7 +3,6 @@ import { TagsInput } from 'react-tag-input-component'
 import apiFetch from '@wordpress/api-fetch'
 import { __ } from '@wordpress/i18n'
 const queryString = require('query-string')
-
 export class PressreviewThis extends Component {
   state = {
     title: '',
@@ -12,7 +11,6 @@ export class PressreviewThis extends Component {
     tags: [],
     isLoading: false
   }
-
   componentDidMount() {
     const parsed = queryString.parse(window.location.search)
 
@@ -34,7 +32,6 @@ export class PressreviewThis extends Component {
       })
     }
   }
-
   onSubmit = () => {
     const { title, description, url, tags } = this.state
 
@@ -68,7 +65,6 @@ export class PressreviewThis extends Component {
         })
       })
   }
-
   render() {
     const { title, description, tags, isLoading } = this.state
 

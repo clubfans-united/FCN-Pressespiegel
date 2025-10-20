@@ -5,7 +5,6 @@ namespace FCNPressespiegel\Cronjobs;
 use FCNPressespiegel\Manager\PressreviewManager;
 use Rockschtar\WordPress\Cronjob\CronJob;
 use Rockschtar\WordPress\Cronjob\Models\CronjobConfig;
-
 class PressreviewAutoImportCronjob extends CronJob
 {
     public function execute(): void
