@@ -110,15 +110,17 @@ class PressreviewItem implements JsonSerializable
      */
     public function jsonSerialize(): array
     {
+
+        $createdAsString = $this->created->format(get_option('date_format') . ' ' . get_option('time_format'));
+
         return [
             'title' => $this->getDisplayTitle(),
             'original_title' => $this->getOriginalTitle(),
             'excerpt' => $this->getExcerpt(),
             'url' => $this->getUrl(),
             'host' => $this->getHost(),
-            'created' => DateTimeUtils::convertDateTimeToWordPressDateString(
-                $this->created,
-            ),
+            'created' => $createdAsString,
+            'created_timestamp' => $this->created->getTimestamp(),
         ];
     }
 

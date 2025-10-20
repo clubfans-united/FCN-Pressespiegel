@@ -3,12 +3,8 @@
 namespace FCNPressespiegel\Controller;
 
 use FCNPressespiegel\Enum\Action;
-use FCNPressespiegel\Enum\PostType;
 use FCNPressespiegel\Exceptions\DuplicatePressreviewPostException;
 use FCNPressespiegel\Manager\PressreviewManager;
-use Rockschtar\WordPress\Settings\Fields\Custom;
-use Rockschtar\WordPress\Settings\Fields\Textarea;
-use Rockschtar\WordPress\Settings\Models\SettingsPage;
 use WP_REST_Request;
 use WP_REST_Response;
 
@@ -22,7 +18,6 @@ class PressreviewBookmarkletController
         add_action('wp_print_styles', $this->removeStyles(...));
         add_action('wp_enqueue_scripts', $this->enqueueScripts(...));
         add_action('rest_api_init', $this->registerRestRoute(...));
-        add_action('rswp_create_settings', $this->bookmarkletSettings(...));
         add_filter('redirect_canonical', $this->disableRedirectCanoncial(...));
         add_filter('template_include', $this->templateInclude(...));
         add_filter('show_admin_bar', $this->hideAdminBar(...));
@@ -32,7 +27,7 @@ class PressreviewBookmarkletController
     {
         add_rewrite_rule(
             'pressreview_this',
-            'index.php?fcnp-action=' . Action::PRESSREVIEW_THIS_SHOW,
+            'index.php?fcnp-action=' . Action::PRESSREVIEW_THIS_SHOW->value,
             'top',
         );
     }
@@ -85,13 +80,11 @@ class PressreviewBookmarkletController
         }
 
         global $wp_styles;
-        $i = 0;
-        foreach ($wp_styles->queue as $style) {
-            if (!string($style)->contains('cu-pressreview-this')) {
-                unset($wp_styles->queue[$i]);
-            }
-            $i++;
-        }
+
+        $wp_styles->queue = array_filter(
+            $wp_styles->queue,
+            fn($style) => str_contains($style, 'cu-pressreview-this')
+        );
     }
 
     private function templateInclude($template): string
@@ -196,48 +189,8 @@ class PressreviewBookmarkletController
         ]);
     }
 
-    private function bookmarkletSettings(): void
-    {
-        $page = SettingsPage::create('cu-pressreview-bookmarlet')
-            ->setParent('edit.php?post_type=' . PostType::PRESSREVIEW)
-            ->setMenuTitle(__('Bookmarklet', 'fcn-pressespiegel'))
-            ->setPageTitle(__('Pressespiegel Bookmarklet', 'fcn-pressespiegel'));
-
-        $pressreviewAddHref =
-            '<a class="button-primary" href="%s">Zum Pressespiegel hinzufügen</a>';
-        $pressreviewAddHref = sprintf(
-            $pressreviewAddHref,
-            PressreviewManager::getBookmarkletLink(),
-        );
-
-        $pressreviewAddButton = Custom::create(
-            'cu-pressreview-bookmarklet-button',
-        )
-            ->setLabel(__('Button', 'fcn-pressespiegel'))
-            ->setDescription(
-                __(
-                    'Diesen Link/Button in die Browser-Bookmarkleiste ziehen:',
-                    'fcn-pressespiegel',
-                ),
-            )
-            ->setContent($pressreviewAddHref);
-
-        $page->addField($pressreviewAddButton);
-
-        $bookmarkletCode = Textarea::create('cu-pressreview-bookmarkleet-code')
-            ->setLabel(__('Bookmarklet Code', 'fcn-pressespiegel'))
-            ->setReadonly(true)
-            ->setDefaultOption(PressreviewManager::getBookmarkletJavascript());
-
-        $page->addField($bookmarkletCode);
-
-        rswp_register_settings_page($page);
-    }
-
     private function isPressreviewAdd(): bool
     {
-        return Action::getCurrentAction(true)->equals(
-            new Action(Action::PRESSREVIEW_THIS_SHOW),
-        );
+        return Action::getCurrentAction(true) === Action::PRESSREVIEW_THIS_SHOW;
     }
 }
