@@ -2,6 +2,7 @@
 
 namespace FCNPressespiegel\Controller;
 
+use FCNPressespiegel\Enum\Option;
 use FCNPressespiegel\Enum\PostType;
 use FCNPressespiegel\Manager\PressreviewManager;
 
@@ -9,26 +10,27 @@ class SettingsController
 {
     use Controller;
 
-    private const OPTION_CRONJOB_ENABLED = '_fcnp_cronjob_enabled';
-
     private const SETTINGS_GROUP = 'fcnp_settings';
 
     private const SETTINGS_SECTION = 'fcnp_main';
 
     private const MENU_SLUG = 'fcn-pressespiegel-settings';
 
+    private PressreviewManager $pressreviewManager;
+
     private function __construct()
     {
+        $this->pressreviewManager = new PressreviewManager();
         add_action('admin_menu', $this->registerMenu(...));
         add_action('admin_init', $this->registerSettings(...));
     }
 
     private function registerMenu(): void
     {
-        $parent_slug = 'edit.php?post_type=' . PostType::PRESSREVIEW;
+        $parentSlug = 'edit.php?post_type=' . PostType::PRESSREVIEW;
         $capability = 'manage_options';
         add_submenu_page(
-            $parent_slug,
+            $parentSlug,
             __('Pressespiegel Einstellungen', 'fcn-pressespiegel'),
             __('Einstellungen', 'fcn-pressespiegel'),
             $capability,
@@ -41,13 +43,23 @@ class SettingsController
     {
         register_setting(
             self::SETTINGS_GROUP,
-            self::OPTION_CRONJOB_ENABLED,
+            Option::CRONJOB_ENABLED->value,
             [
                 'type' => 'boolean',
                 'sanitize_callback' => function ($value) {
                     return $value ? '1' : '0';
                 },
                 'default' => '1',
+            ]
+        );
+
+        register_setting(
+            self::SETTINGS_GROUP,
+            Option::HIDE_OLDER_THEN_DAYS->value,
+            [
+                'type' => 'integer',
+                'sanitize_callback' => 'absint',
+                'default' => 9,
             ]
         );
 
@@ -66,19 +78,12 @@ class SettingsController
             self::SETTINGS_SECTION
         );
 
-        add_settings_section(
-            'fcnp_bookmarklet',
-            __('Bookmarklet', 'fcn-pressespiegel'),
-            $this->renderBookmarkletSection(...),
-            self::MENU_SLUG
-        );
-
         add_settings_field(
-            'fcnp_bookmarklet_button',
-            __('Button', 'fcn-pressespiegel'),
-            $this->renderBookmarkletButtonField(...),
+            Option::HIDE_OLDER_THEN_DAYS->value,
+            __('Ausblenden', 'fcn-pressespiegel'),
+            $this->renderHideOlderThenDays(...),
             self::MENU_SLUG,
-            'fcnp_bookmarklet'
+            self::SETTINGS_SECTION
         );
     }
 
@@ -113,37 +118,34 @@ class SettingsController
 
     private function renderCronjobEnabledField(): void
     {
-        $value = get_option(self::OPTION_CRONJOB_ENABLED, '1');
+        $value = get_option(Option::CRONJOB_ENABLED->value, '1');
         $checked = checked('1', $value, false);
-        $id = esc_attr(self::OPTION_CRONJOB_ENABLED);
+        $id = esc_attr(Option::CRONJOB_ENABLED->value);
         $description = esc_html(__('Aktiviere diese Option, um den Artikel automatisch zu importieren.', 'fcn-pressespiegel'));
 
         echo <<<HTML
             <label for="$id">
                 <input type="checkbox" id="$id" name="$id" value="1" $checked />
-                $description
+                <p>
+                    $description
+                </p>
             </label>
         HTML;
     }
-    private function renderBookmarkletSection(): void
-    {
-        echo '<p>' . esc_html(__('Diesen Link/Button in die Browser-Bookmarkleiste ziehen:', 'fcn-pressespiegel')) . '</p>';
-    }
 
-    private function renderBookmarkletButtonField(): void
+    private function renderHideOlderThenDays(): void
     {
-        $link = PressreviewManager::getBookmarkletLink();
-        $script =  PressreviewManager::getBookmarkletJavascript();
-        $label = __('Zum Pressespiegel hinzufügen', 'fcn-pressespiegel');
-        $button = sprintf(
-            '<a class="button-primary" href="%s">%s</a>',
-            $link,
-            esc_html($label)
-        );
+        $value = get_option(Option::HIDE_OLDER_THEN_DAYS->value, 9);
+        $id = esc_attr(Option::HIDE_OLDER_THEN_DAYS->value);
+        $description = esc_html(__('Tage nachdem Pressespiegel Artikel ausgeblendet werden', 'fcn-pressespiegel'));
 
         echo <<<HTML
-            <p>$button</p>
-            <p><textarea readonly rows="5" cols="80" class="large-text code">$script</textarea></p>
+            <label for="$id">
+                <input type="number" id="$id" name="$id" min="1" max="100" value="$value" />
+                <p>
+                    $description
+                </p>
+            </label>
         HTML;
     }
 }

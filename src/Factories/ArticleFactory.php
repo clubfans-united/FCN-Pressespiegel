@@ -3,21 +3,19 @@
 namespace FCNPressespiegel\Factories;
 
 use DateTime;
-use FCNPressespiegel\Models\PressreviewItem;
+use FCNPressespiegel\Models\Article;
 
-class PressreviewItemFactory
+class ArticleFactory
 {
-    public static function create(string $title, string $url, string $excerpt, DateTime $created): PressreviewItem
+    public static function create(string $title, string $url, string $excerpt, DateTime $created): Article
     {
         $parsedUrl = parse_url($url);
         $host = $parsedUrl['host'];
-        $pressreviewItem = new PressreviewItem();
+        $pressreviewItem = new Article();
         $pressreviewItem->setOriginalTitle($title);
         $pressreviewItem->setUrl($url);
         $pressreviewItem->setHost($host);
-        $pressreviewItem->setDisplayTitle(
-            $title . ' | ' . str_replace('www.', '', $host),
-        );
+        $pressreviewItem->setDisplayTitle($title . ' | ' . str_replace('www.', '', $host));
         $pressreviewItem->setExcerpt($excerpt);
         $pressreviewItem->setCreated($created);
         return $pressreviewItem;

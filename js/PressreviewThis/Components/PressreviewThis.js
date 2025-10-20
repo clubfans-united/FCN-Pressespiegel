@@ -2,6 +2,7 @@ import { Component } from '@wordpress/element'
 import { TagsInput } from 'react-tag-input-component'
 import apiFetch from '@wordpress/api-fetch'
 import { __ } from '@wordpress/i18n'
+
 const queryString = require('query-string')
 
 export class PressreviewThis extends Component {
