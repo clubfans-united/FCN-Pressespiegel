@@ -2,9 +2,7 @@
 
 namespace FCNPressespiegel\Enum;
 
-use MyCLabs\Enum\Enum;
-
-class PostType extends Enum
+class PostType
 {
     public const PRESSREVIEW = 'pressreview';
 }
