@@ -5,6 +5,7 @@ namespace FCNPressespiegel\Controller;
 use FCNPressespiegel\Commands\PressreviewCommand;
 use FCNPressespiegel\Enum\PostType;
 use FCNPressespiegel\Enum\PressreviewMeta;
+use FCNPressespiegel\Manager\PressreviewManager;
 use WP_Query;
 
 class PressreviewController
@@ -20,10 +21,53 @@ class PressreviewController
         add_filter('posts_where', $this->whereNotOlderThan(...), 10, 2);
         add_filter('query_vars', $this->addQueryVars(...));
         add_filter('wpseo_sitemap_exclude_post_type', $this->excludeFromSitemap(...), 10, 2,);
+        add_action('admin_enqueue_scripts', $this->enqueueScripts(...));
+
 
         if (class_exists('WP_CLI')) {
             \WP_CLI::add_command('pressreview', PressreviewCommand::class);
         }
+    }
+
+    private function enqueueScripts($hook): void
+    {
+        if($hook !== 'edit.php') {
+            return;
+        }
+
+        global $typenow;
+
+        if($typenow !== PostType::PRESSREVIEW) {
+            return;
+        }
+
+        $assets = FCNP_PLUGIN_DIR . 'dist/wp/pressreview-edit.asset.php';
+
+        if(file_exists($assets)) {
+            $assets = include $assets;
+        } else {
+            $assets = ['dependencies' => [], 'version' => time()];
+        }
+
+        wp_enqueue_script(
+            'pressreview-this',
+            FCNP_PLUGIN_URL . 'dist/wp/pressreview-edit.js',
+            $assets['dependencies'],
+            $assets['version'],
+        );
+    }
+
+    private function addButton($views): array {
+        if (!current_user_can('manage_options')) {
+            return $views;
+        }
+
+        $url = admin_url('admin.php?action=custom_pressreview_action');
+        $button = '<a href="' . esc_url($url) . '" class="page-title-action">Custom Button</a>';
+
+        echo $button;
+
+        return $views;
     }
 
     private function registerPostType(): void
@@ -144,5 +188,9 @@ class PressreviewController
         $query_vars[] = 'fcnp-action';
 
         return $query_vars;
+    }
+
+    private function import() : void {
+        PressreviewManager::import();
     }
 }

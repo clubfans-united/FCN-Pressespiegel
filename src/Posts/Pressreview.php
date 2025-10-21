@@ -5,6 +5,8 @@ namespace FCNPressespiegel\Posts;
 use Exception;
 use FCNPressespiegel\Enum\PostType;
 use FCNPressespiegel\Enum\PressreviewMeta;
+use FCNPressespiegel\Exceptions\InvalidPostTypeException;
+use FCNPressespiegel\Exceptions\PostNotFoundException;
 
 class Pressreview
 {
@@ -15,7 +17,7 @@ class Pressreview
     public function __construct(\WP_Post $post)
     {
         if (get_post_type($post) !== PostType::PRESSREVIEW) {
-            throw new Exception('Invalid Post Type');
+            throw new InvalidPostTypeException();
         }
 
         $this->post = $post;
@@ -27,13 +29,17 @@ class Pressreview
         );
     }
 
-    public static function createFromPostId(int $post_id): Pressreview
+    /**
+     * @throws PostNotFoundException
+     * @throws InvalidPostTypeException
+     */
+    public static function createFromPostId(int $postId): Pressreview
     {
-        if (false === get_post_status($post_id)) {
-            throw new Exception('Post not found. ID: ' . $post_id);
+        if (false === get_post_status($postId)) {
+            throw new PostNotFoundException('Post not found. ID: ' . $postId);
         }
 
-        return new Pressreview(get_post($post_id));
+        return new Pressreview(get_post($postId));
     }
 
     /**

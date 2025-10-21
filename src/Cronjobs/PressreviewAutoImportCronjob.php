@@ -15,7 +15,7 @@ class PressreviewAutoImportCronjob extends CronJob
             return;
         }
 
-        PressreviewManager::doPressreviewAutoImport();
+        PressreviewManager::import();
     }
 
     public function config(): CronjobConfig

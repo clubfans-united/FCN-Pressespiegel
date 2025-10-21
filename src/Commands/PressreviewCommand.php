@@ -40,7 +40,7 @@ class PressreviewCommand
     {
         \WP_CLI::line('Import Pressreview Items');
 
-        $pressreviewPosts = PressreviewManager::doPressreviewAutoImport();
+        $pressreviewPosts = PressreviewManager::import();
 
         foreach ($pressreviewPosts as $pressreviewPost) {
             \WP_CLI::line($pressreviewPost->getPost()->post_title);

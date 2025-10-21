@@ -6,6 +6,8 @@ use Carbon\Carbon;
 use FCNPressespiegel\Enum\PostType;
 use FCNPressespiegel\Enum\PressreviewMeta;
 use FCNPressespiegel\Exceptions\DuplicatePressreviewPostException;
+use FCNPressespiegel\Exceptions\InvalidPostTypeException;
+use FCNPressespiegel\Exceptions\PostNotFoundException;
 use FCNPressespiegel\Factories\PressreviewItemFactory;
 use FCNPressespiegel\Models\PressreviewItem;
 use FCNPressespiegel\Models\PressreviewSource;
@@ -35,13 +37,9 @@ class PressreviewManager
     }
 
     /**
-     * @param string $title
-     * @param string $description
-     * @param string $url
-     * @param array $tags
-     *
-     * @return Pressreview
      * @throws DuplicatePressreviewPostException
+     * @throws InvalidPostTypeException
+     * @throws PostNotFoundException
      */
     public static function addPressreviewItem(
         string $title,
@@ -68,14 +66,10 @@ class PressreviewManager
         return Pressreview::createFromPostId($post_id);
     }
 
-    /**
-     * @return string
-     */
     public static function getBookmarkletLink(): string
     {
-        $bookmarklet_gen = new Bookmarkletgen();
-        $js_template_content = self::getBookmarkletJavascript();
-        return $bookmarklet_gen->crunch($js_template_content);
+        $bookmarkletGen = new Bookmarkletgen();
+        return $bookmarkletGen->crunch(self::getBookmarkletJavascript());
     }
 
     /**
@@ -103,24 +97,22 @@ class PressreviewManager
     /**
      * @return Pressreview[]
      */
-    public static function doPressreviewAutoImport(): array
+    public static function import(): array
     {
         $pressreviewItems = self::getPressreviewItems();
+        $exceptions = [];
         $importedPressreviews = [];
+
         foreach ($pressreviewItems as $pressreviewItem) {
             /* @var PressreviewItem $pressreviewItem */
             try {
-                $importedPressreviews[] = self::addPressreviewItem(
-                    $pressreviewItem->getDisplayTitle(),
-                    '',
-                    $pressreviewItem->getUrl(),
-                    [],
-                );
+                $importedPressreviews[] = self::addPressreviewItem($pressreviewItem->getDisplayTitle(), '', $pressreviewItem->getUrl(), [],);
             } catch (DuplicatePressreviewPostException $e) {
                 continue;
             } catch (Exception $e) {
                 do_action('fcnp_autoimport_exception', $e);
                 error_log($e->getMessage());
+                $exceptions[] = $e;
                 continue;
             }
         }
@@ -142,7 +134,6 @@ class PressreviewManager
             try {
                 $feed = Reader::import($source->getUrl());
             } catch (Exception $exception) {
-                /** @noinspection ForgottenDebugOutputInspection */
                 do_action('fcnp_feed_exception', $exception);
                 error_log($exception->getMessage());
                 continue;
