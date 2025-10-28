@@ -89,6 +89,7 @@ class PressreviewController
             'menu_icon' => 'dashicons-media-document',
             'has_archive' => true,
             'taxonomies' => ['post_tag'],
+            'show_in_rest' => true,
             'show_ui' => true,
             'labels' => [
                 'name' => 'Pressespiegel',
