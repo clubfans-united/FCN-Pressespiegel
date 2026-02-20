@@ -162,7 +162,6 @@ class PressreviewManager
         $sources[] = new Source('https://www.n-town.de/glubbblog/index.php/feed');
         $sources[] = new Source('https://www.fcn.de/rss.xml');
         $sources[] = new Source('https://www.youtube.com/feeds/videos.xml?channel_id=UCFWLmp622TIINSPFiv1ivsQ');
-        $sources[] = new Source('https://www.youtube.com/feeds/videos.xml?channel_id=UCRFsyeKu07-LnHDG44O6uCA');
         $sources[] = new Source('https://clubfokus.de/feed/');
         $sources[] = new Source(
             'https://www.youtube.com/feeds/videos.xml?channel_id=UCRFsyeKu07-LnHDG44O6uCA',
