@@ -14,8 +14,8 @@ use FCNPressespiegel\Models\ImportResult;
 use FCNPressespiegel\Models\Source;
 use FCNPressespiegel\Posts\Pressreview;
 use Exception;
+use Laminas\Feed\Reader\Entry\EntryInterface;
 use Laminas\Feed\Reader\Reader;
-use SimplePie\Item;
 use WP_Query;
 
 class PressreviewManager
@@ -165,9 +165,27 @@ class PressreviewManager
         $sources[] = new Source('https://clubfokus.de/feed/');
         $sources[] = new Source(
             'https://www.youtube.com/feeds/videos.xml?channel_id=UCRFsyeKu07-LnHDG44O6uCA',
-            fn(Item $item) => str_contains($item->get_content() ?? '', '#1FCNürnberg')
+            fn(EntryInterface $item) => str_contains($this->mediaDescription($item), '#1FCNürnberg')
         );
 
         return apply_filters('fcnp_sources', $sources);
+    }
+
+    /**
+     * Reads the Media RSS description (media:group/media:description) from a
+     * feed entry's raw DOM. Laminas' getContent()/getDescription() return an
+     * empty string for media feeds such as YouTube, so the description has to
+     * be read from the Media RSS namespace directly.
+     */
+    private function mediaDescription(EntryInterface $item): string
+    {
+        $mediaNamespace = 'http://search.yahoo.com/mrss/';
+        $media = simplexml_import_dom($item->getElement())->children($mediaNamespace);
+
+        if (!isset($media->group)) {
+            return '';
+        }
+
+        return (string) $media->group->children($mediaNamespace)->description;
     }
 }
