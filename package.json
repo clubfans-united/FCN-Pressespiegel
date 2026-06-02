@@ -1,9 +1,16 @@
 {
-  "name": "wordpress-fcn-pressespiegel",
+  "name": "fcn-pressespiegel",
   "version": "1.0.0",
   "description": "FCN Pressespiegel",
   "author": "Stefan Helmer <mail@clubfans-united.de>",
   "license": "proprietary",
+  "files": [
+    "fcn-pressespiegel.php",
+    "src",
+    "templates",
+    "dist",
+    "vendor"
+  ],
   "config": {
     "webpack_src_dir": "js/Blocks",
     "output_path": "dist/wp",
@@ -17,7 +24,8 @@
     "pretty": "prettier --write $npm_package_config_resources_js_dir",
     "prettier-check": "prettier --check $npm_package_config_resources_js_dir",
     "packages-update": "wp-scripts packages-update",
-    "postpackages-update": "npm run build"
+    "postpackages-update": "npm run build",
+    "plugin-zip": "wp-scripts plugin-zip"
   },
   "lint-staged": {
     "*.{js,jsx}": "eslint"

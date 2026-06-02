@@ -4,18 +4,21 @@ on:
   push:
     branches:
       - main
-    pull_request:
-      branches:
-        - main
     tags:
       - '*'
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
 
 jobs:
   phpcs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
@@ -32,12 +35,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
 
       - name: Install dependencies
         run: npm install
@@ -45,25 +48,24 @@ jobs:
       - name: ESLint
         run: npm run eslint
 
-
   build:
     runs-on: ubuntu-latest
     needs: [phpcs, eslint]
     if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '22'
 
       - name: Install dependencies
         run: npm install
 
-      - name: NPM Build
-        run: npm run build  # Replace with your npm build script
+      - name: Build
+        run: npm run build
 
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
@@ -73,27 +75,28 @@ jobs:
       - name: Composer Install
         run: composer install --no-dev --no-suggest --optimize-autoloader --no-interaction
 
-      - name: Remove unwanted files
+      - name: Set Version in PHP File
         run: |
-          find . -type f -name "phpcs.xml" -exec rm -f {} +
-          find . -type f -name ".gitignore" -exec rm -f {} +
-          find . -type f -name "webpack.config.js" -exec rm -f {} +
-          find . -type d -name "node_modules" -exec rm -rf {} +
-          find . -type d -name ".github" -exec rm -rf {} +
-          find . -type d -name ".git" -exec rm -rf {} +
+          sed -i "s/Version:.*$/Version: ${{ github.ref_name }}/" fcn-pressespiegel.php
+
+      - name: Create plugin zip
+        run: npm run plugin-zip
+
+      - name: Copy zip with version suffix
+        run: cp fcn-pressespiegel.zip fcn-pressespiegel-${{ github.ref_name }}.zip
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: build
           path: |
-            .
+            fcn-pressespiegel.zip
+            fcn-pressespiegel-${{ github.ref_name }}.zip
 
   release:
     runs-on: ubuntu-latest
     needs: build
     steps:
-
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -109,31 +112,15 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: build
-          path: release-artifact
 
-      - name: Set Version in PHP File
-        run: |
-          cd release-artifact
-          sed -i "s/Version:.*$/Version: ${{ github.ref_name }}/" fcn-pressespiegel.php
-        shell: bash
-
-      - name: Zip Repository
-        run: |
-          cd release-artifact
-          echo ${{ github.ref_name }}
-          zip -r fcn-pressespiegel-${{ github.ref_name }}.zip .
-          cp fcn-pressespiegel-${{ github.ref_name }}.zip fcn-pressespiegel.zip
-        shell: bash
-
-
-      - name: Upload Release Asset
+      - name: Upload Release Asset (versioned)
         id: upload-release-asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./release-artifact/fcn-pressespiegel-${{ github.ref_name }}.zip
+          asset_path: ./fcn-pressespiegel-${{ github.ref_name }}.zip
           asset_name: fcn-pressespiegel-${{ github.ref_name }}.zip
           asset_content_type: application/zip
 
@@ -144,6 +131,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./release-artifact/fcn-pressespiegel.zip
+          asset_path: ./fcn-pressespiegel.zip
           asset_name: fcn-pressespiegel.zip
           asset_content_type: application/zip

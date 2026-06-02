@@ -1,0 +1,29 @@
+# Files that are not required to run the plugin are excluded from
+# `git archive` exports (release archives) via the export-ignore attribute.
+# The runtime consists of: fcn-pressespiegel.php, src/, templates/ and the
+# build-generated dist/ and vendor/ directories.
+
+# Repository / version control meta
+/.gitattributes     export-ignore
+/.gitignore         export-ignore
+/.github            export-ignore
+
+# Build & lint tooling configuration
+/webpack.config.js  export-ignore
+/eslint.config.mjs  export-ignore
+/.prettierrc.json   export-ignore
+/phpcs.xml          export-ignore
+
+# Dependency manifests (the bundled vendor/ is used at runtime, not these)
+/composer.json      export-ignore
+/composer.lock      export-ignore
+/package.json       export-ignore
+/package-lock.json  export-ignore
+
+# JS/SCSS sources – compiled into dist/ by webpack, not loaded directly
+/js                 export-ignore
+
+# Documentation & AI assistant notes
+/README.md          export-ignore
+/CLAUDE.md          export-ignore
+/.claude            export-ignore
