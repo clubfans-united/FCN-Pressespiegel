@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "FCN Pressespiegel",
   "author": "Stefan Helmer <mail@clubfans-united.de>",
-  "license": "proprietary",
+  "license": "UNLICENSED",
+  "private": true,
   "files": [
     "fcn-pressespiegel.php",
     "src",

@@ -9,6 +9,8 @@
  * Version:         develop
  * Requires at least: 6.4
  * Requires PHP:      8.3
+ * License:         Proprietary (All Rights Reserved)
+ * Copyright:       2025–2026 Clubfans United
  *
  */
 
