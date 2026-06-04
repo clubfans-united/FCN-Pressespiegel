@@ -1,6 +1,6 @@
 require('jquery')
 
-jQuery(function ($) {
+jQuery(($) => {
   const ajaxUrl = window.pressreviewEdit?.ajaxUrl
   const ajaxNonce = window.pressreviewEdit?.ajaxNonce
 
@@ -27,13 +27,13 @@ jQuery(function ($) {
         _ajax_nonce: ajaxNonce,
         action: 'fcnp_import'
       },
-      success: function (response) {
+      success: (response) => {
         console.log(response)
       },
-      error: function (error) {
+      error: (error) => {
         console.error(error)
       },
-      complete: function () {
+      complete: () => {
         button.prop('disabled', false)
         spinner.hide()
       }

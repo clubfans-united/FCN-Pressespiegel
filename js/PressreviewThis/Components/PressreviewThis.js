@@ -112,6 +112,7 @@ export class PressreviewThis extends Component {
           />
         </div>
         <button
+          type='button'
           onClick={this.onSubmit}
           disabled={isLoading}
           className='button-primary button-large'

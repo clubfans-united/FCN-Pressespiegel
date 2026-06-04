@@ -31,7 +31,7 @@ jobs:
       - name: Run PHPCS
         run: vendor/bin/phpcs
 
-  eslint:
+  biome:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -45,12 +45,12 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: ESLint
-        run: npm run eslint
+      - name: Biome check
+        run: npm run check
 
   build:
     runs-on: ubuntu-latest
-    needs: [phpcs, eslint]
+    needs: [phpcs, biome]
     if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
     steps:
       - name: Checkout repository

@@ -20,26 +20,24 @@
   "scripts": {
     "build": "wp-scripts build --webpack-copy-php --webpack-src-dir=$npm_package_config_webpack_src_dir --output-path=$npm_package_config_output_path",
     "start": "wp-scripts start --webpack-copy-php --webpack-src-dir=$npm_package_config_webpack_src_dir --output-path=$npm_package_config_output_path",
-    "eslint": "npx eslint $npm_package_config_resources_js_dir",
-    "eslint-fix": "npx eslint $npm_package_config_resources_js_dir --fix",
-    "pretty": "prettier --write $npm_package_config_resources_js_dir",
-    "prettier-check": "prettier --check $npm_package_config_resources_js_dir",
+    "lint": "biome lint js",
+    "lint-fix": "biome lint --write js",
+    "format": "biome format --write js",
+    "format-check": "biome format js",
+    "check": "biome check js",
+    "check-fix": "biome check --write js",
     "packages-update": "wp-scripts packages-update",
     "postpackages-update": "npm run build",
     "plugin-zip": "wp-scripts plugin-zip"
   },
   "lint-staged": {
-    "*.{js,jsx}": "eslint"
+    "*.{js,jsx}": "biome check --write --no-errors-on-unmatched"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.4.16",
     "@wordpress/scripts": "^30.12.1",
-    "eslint": "^9.24.0",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-prettier": "^5.5.3",
-    "prettier-config-standard": "^7.0.0",
-    "prettier": "^3.6.2",
-    "prop-types": "^15.8.1",
     "mustard-ui": "^1.0.4",
+    "prop-types": "^15.8.1",
     "query-string": "^7.1.1",
     "react-tag-input-component": "^1.1.1",
     "resolve-url-loader": "^5.0.0",

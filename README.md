@@ -1,51 +1,94 @@
 # FCN Pressespiegel
-FCN Pressespiegel Wordpress Plugin. Formerly part of Clubfans United.
+
+FCN Pressespiegel WordPress plugin. Formerly part of Clubfans United.
+
+Aggregates news about the 1. FC Nürnberg from a set of configured RSS/Atom feeds
+into a custom `pressreview` post type.
 
 ## Requirements
 
-- PHP version 8.2
-- WordPress 6.*
+- PHP 8.3+
+- WordPress 6.4+
 
 ## Installation
-
-To install the plugin, follow these steps:
 
 1. Download the plugin files to your `/wp-content/plugins/` directory, or install the plugin through the WordPress plugin screen directly.
 2. Activate the plugin through the 'Plugins' screen in WordPress.
 
-## Build
+## Usage
 
-## PHP/Composer
+### Importing articles
 
-```bash 
+- **WordPress admin:** open **Pressespiegel** (the post type list) and click
+  **„Artikel aus Feeds importieren"** to pull in new articles from all feeds.
+- **WP-CLI:** see below.
+
+Imports are incremental: only articles newer than the most recent existing
+article are imported. When no articles exist yet (fresh install or after
+`wp pressreview delete`), everything available in the feeds is imported.
+
+## WP-CLI
+
+```bash
+# Import new articles from all configured feeds
+wp pressreview import
+
+# Delete all press review articles (asks for confirmation)
+wp pressreview delete
+
+# ... without the confirmation prompt
+wp pressreview delete --yes
+```
+
+## Development
+
+### PHP / Composer
+
+```bash
 composer install
 ```
 
-## Build (or develop) CSS & JS
+Run the PHP coding-standard checks (PHP_CodeSniffer, PSR-12):
 
-Use [npm](https://nodejs.org/en/) to install JavaScript and CSS dependencies.
+```bash
+composer test
+```
 
-```bash 
+### JavaScript / CSS
+
+Install dependencies:
+
+```bash
 npm install
 ```
 
-### Build Assets JS/JSX/Blocks (with [@wordpress/scripts](https://developer.wordpress.org/block-editor/reference-guides/packages/packages-scripts/))
+Build assets for development — rebuilds on change, via
+[@wordpress/scripts](https://developer.wordpress.org/block-editor/reference-guides/packages/packages-scripts/):
 
-Transforms your code according the configuration provided so it’s ready for development. The script will automatically
-rebuild if you make changes to the code, and you will see the build errors in the console.
-
-```bash 
+```bash
 npm run start
 ```
 
-You may find that in certain environments Webpack isn't updating when your files change. If this is the case on your
-system, consider using the `watch-poll` command:
+Production build:
 
-## Linting & Formatting
+```bash
+npm run build
+```
 
-### Linting
-- [ESLint](https://eslint.org/) with [JavaScript Standard Style](https://standardjs.com/)
+### Linting & Formatting
 
-### Formatting
-- [Prettier](https://prettier.io/) with [eslint-config-prettier-standard](https://www.npmjs.com/package/eslint-config-prettier-standard)
+Linting and formatting are handled by [Biome](https://biomejs.dev/) (configured
+in `biome.json`: recommended rules incl. the React domain; formatter set to the
+project's JS style — no semicolons, single quotes, no trailing commas, 2-space
+indent, 80 columns).
 
+```bash
+npm run check        # lint + format check (used in CI)
+npm run check-fix    # apply safe lint fixes + format
+npm run lint         # lint only
+npm run format       # format only (writes)
+```
+
+## License
+
+Proprietary — All Rights Reserved. © 2025–2026 Clubfans United. See [LICENSE](LICENSE).
