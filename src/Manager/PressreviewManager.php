@@ -29,6 +29,13 @@ class PressreviewManager
         $articles = [];
         $articleErrors = [];
 
+        // Lower bound that moves forward with each import: the publish date of
+        // the newest existing article. Null when there are no articles yet, in
+        // which case everything available in the feeds is imported.
+        $importSince = $this->latestArticleTimestamp();
+
+        do_action('fcnp_import_feeds_total', count($sources));
+
         foreach ($sources as $source) {
             try {
                 $feedResponse = wp_remote_get($source->getUrl());
@@ -49,10 +56,15 @@ class PressreviewManager
                         continue;
                     }
 
-                    $timestampAgo = Carbon::now()->subHours(24)->getTimestamp();
                     $timestampEntry = $item->getDateCreated()?->getTimestamp() ?? 0;
 
-                    if ($timestampEntry < $timestampAgo) {
+                    // Entries without a usable date are skipped (otherwise they
+                    // would get a 1970 post_date).
+                    if ($timestampEntry <= 0) {
+                        continue;
+                    }
+
+                    if ($importSince !== null && $timestampEntry < $importSince) {
                         continue;
                     }
 
@@ -73,7 +85,8 @@ class PressreviewManager
                 do_action('fcnp_feed_exception', $exception);
                 $feedErrors[$source->getUrl()] = $exception->getMessage();
                 error_log($exception->getMessage());
-                continue;
+            } finally {
+                do_action('fcnp_import_feed_done', $source->getUrl());
             }
         }
 
@@ -151,6 +164,34 @@ class PressreviewManager
     }
 
     /**
+     * Unix timestamp (UTC) of the newest existing article, or null when no
+     * articles exist yet. Used as the moving lower bound for the import.
+     *
+     * post_date is read back and parsed as UTC to match how it is written in
+     * import() (Carbon::createFromTimestamp(...)->format('Y-m-d H:i:s')).
+     */
+    private function latestArticleTimestamp(): ?int
+    {
+        $latest = new WP_Query([
+            'post_type' => PostType::PRESSREVIEW,
+            'post_status' => 'publish',
+            'posts_per_page' => 1,
+            'orderby' => 'date',
+            'order' => 'DESC',
+            'no_found_rows' => true,
+            'fields' => 'ids',
+        ]);
+
+        if (empty($latest->posts)) {
+            return null;
+        }
+
+        $postDate = get_post_field('post_date', $latest->posts[0]);
+
+        return Carbon::parse($postDate, 'UTC')->getTimestamp();
+    }
+
+    /**
      * @return Source[]
      */
     private function getSources(): array
@@ -159,7 +200,7 @@ class PressreviewManager
         $sources[] = new Source('https://www.frankenfernsehen.tv/mediathek/kategorie/sport/1-fc-nuernberg/feed/');
         $sources[] = new Source('https://www.bild.de/feed/nuernberg.xml');
         $sources[] = new Source('https://www.nordbayern.de/sport/1-fc-nuernberg?isRss=true');
-        $sources[] = new Source('https://rss.kicker.de/team/1fcnuernberg');
+        $sources[] = new Source('https://newsfeed.kicker.de/team/1fcnuernberg');
         $sources[] = new Source('https://www.n-town.de/glubbblog/index.php/feed');
         $sources[] = new Source('https://www.fcn.de/rss.xml');
         $sources[] = new Source('https://www.fcn.de/rss_press_review.xml');

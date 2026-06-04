@@ -3,9 +3,9 @@
 namespace FCNPressespiegel\Commands;
 
 use FCNPressespiegel\Enum\PostType;
-use FCNPressespiegel\Enum\PressreviewMeta;
 use FCNPressespiegel\Manager\PressreviewManager;
 use WP_CLI;
+use WP_CLI\Utils;
 use WP_CLI_Command;
 use WP_Query;
 
@@ -34,17 +34,36 @@ class PressreviewCommand extends WP_CLI_Command
      */
     public function import(): void
     {
-        WP_CLI::line('Import Pressreview Items');
+        $progress = null;
 
-        $posts = $this->pressreviewManager->import();
+        $start = static function (int $total) use (&$progress): void {
+            $progress = Utils\make_progress_bar('Fetching feeds', $total);
+        };
 
-        foreach ($posts as $post) {
-            WP_CLI::line($post->getPost()->post_title);
-            WP_CLI::line(get_post_meta($post->getPost()->ID, PressreviewMeta::ARTICLE_URL->value, true));
-            WP_CLI::line('------------------------------------------------------------------');
+        $tick = static function () use (&$progress): void {
+            $progress?->tick();
+        };
+
+        add_action('fcnp_import_feeds_total', $start);
+        add_action('fcnp_import_feed_done', $tick);
+
+        try {
+            $result = $this->pressreviewManager->import();
+        } finally {
+            $progress?->finish();
+            remove_action('fcnp_import_feeds_total', $start);
+            remove_action('fcnp_import_feed_done', $tick);
         }
 
-        WP_CLI::line('Imported ' . count($posts) . ' Pressreview Items');
+        foreach ($result->feedErrors as $url => $message) {
+            WP_CLI::warning(sprintf('Feed failed (%s): %s', $url, $message));
+        }
+
+        foreach ($result->articleErrors as $url => $message) {
+            WP_CLI::warning(sprintf('Article failed (%s): %s', $url, $message));
+        }
+
+        WP_CLI::success(sprintf('Imported %d Pressreview Item(s).', count($result->articles)));
     }
 
     /**
