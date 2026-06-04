@@ -2,7 +2,9 @@
 
 namespace FCNPressespiegel\Enum;
 
-class PressreviewMeta
+enum PressreviewMeta: string
 {
-    public const PRESSREVIEW_URL = 'fcnp-pressreview-url';
+    case ARTICLE_URL = 'fcnp-pressreview-url';
+
+    case SOURCE_URL = 'fcnp-pressreview-source';
 }

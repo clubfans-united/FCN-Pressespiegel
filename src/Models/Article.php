@@ -19,6 +19,19 @@ class Article implements JsonSerializable
 
     private string $host;
 
+    private string $sourceUrl = '';
+
+    public function getSourceUrl(): string
+    {
+        return $this->sourceUrl;
+    }
+
+    public function setSourceUrl(string $sourceUrl): Article
+    {
+        $this->sourceUrl = $sourceUrl;
+        return $this;
+    }
+
     public function setHost(string $host): Article
     {
         $this->host = $host;

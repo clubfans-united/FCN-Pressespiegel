@@ -24,7 +24,7 @@ class Pressreview
         $this->post_id = $post->ID;
         $this->url = get_post_meta(
             $this->post_id,
-            PressreviewMeta::PRESSREVIEW_URL,
+            PressreviewMeta::ARTICLE_URL->value,
             true,
         );
     }

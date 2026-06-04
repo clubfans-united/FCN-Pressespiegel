@@ -67,7 +67,7 @@ class PressreviewManager
                         $item->getLink(),
                         '',
                         $dateCreated,
-                    );
+                    )->setSourceUrl($source->getUrl());
                 }
             } catch (Exception $exception) {
                 do_action('fcnp_feed_exception', $exception);
@@ -91,7 +91,8 @@ class PressreviewManager
 
                 $postId = wp_insert_post($postData);
 
-                update_post_meta($postId, PressreviewMeta::PRESSREVIEW_URL, $article->getUrl());
+                update_post_meta($postId, PressreviewMeta::ARTICLE_URL->value, $article->getUrl());
+                update_post_meta($postId, PressreviewMeta::SOURCE_URL->value, $article->getSourceUrl());
             } catch (Exception $e) {
                 $articleErrors[$article->getUrl()] = $e->getMessage();
             }
@@ -122,7 +123,7 @@ class PressreviewManager
 
         $postId = wp_insert_post($postData);
         wp_set_object_terms($postId, $tags, 'post_tag');
-        update_post_meta($postId, PressreviewMeta::PRESSREVIEW_URL, $article->getUrl());
+        update_post_meta($postId, PressreviewMeta::ARTICLE_URL->value, $article->getUrl());
 
         return Pressreview::createFromPostId($postId);
     }
@@ -140,7 +141,7 @@ class PressreviewManager
         $query = new WP_Query([
             'post_type' => PostType::PRESSREVIEW,
             'post_status' => 'publish',
-            'meta_key' => PressreviewMeta::PRESSREVIEW_URL,
+            'meta_key' => PressreviewMeta::ARTICLE_URL->value,
             'meta_value' => $url,
         ]);
 
@@ -161,6 +162,7 @@ class PressreviewManager
         $sources[] = new Source('https://rss.kicker.de/team/1fcnuernberg');
         $sources[] = new Source('https://www.n-town.de/glubbblog/index.php/feed');
         $sources[] = new Source('https://www.fcn.de/rss.xml');
+        $sources[] = new Source('https://www.fcn.de/rss_press_review.xml');
         $sources[] = new Source('https://www.youtube.com/feeds/videos.xml?channel_id=UCFWLmp622TIINSPFiv1ivsQ');
         $sources[] = new Source('https://clubfokus.de/feed/');
         $sources[] = new Source(

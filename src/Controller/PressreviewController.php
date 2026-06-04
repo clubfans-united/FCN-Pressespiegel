@@ -17,6 +17,7 @@ class PressreviewController
     private function __construct()
     {
         add_action('init', $this->registerPostType(...));
+        add_action('init', $this->registerPostMeta(...));
         add_action('template_redirect', $this->redirectToUrl(...));
         add_action('pre_get_posts', $this->postsPerPage(...));
         add_filter('post_type_link', $this->pressreviewLink(...), 99, 2);
@@ -109,12 +110,33 @@ class PressreviewController
         register_post_type(PostType::PRESSREVIEW, $posttype_args);
     }
 
+    private function registerPostMeta(): void
+    {
+        register_post_meta(PostType::PRESSREVIEW, PressreviewMeta::ARTICLE_URL->value, [
+            'type'              => 'string',
+            'single'            => true,
+            'show_in_rest'      => true,
+            'description'       => 'Externe Artikel-URL des Presseartikels',
+            'sanitize_callback' => 'esc_url_raw',
+            'auth_callback'     => static fn(): bool => current_user_can('edit_posts'),
+        ]);
+
+        register_post_meta(PostType::PRESSREVIEW, PressreviewMeta::SOURCE_URL->value, [
+            'type'              => 'string',
+            'single'            => true,
+            'show_in_rest'      => true,
+            'description'       => 'Feed-/Quellen-URL, aus der der Presseartikel importiert wurde',
+            'sanitize_callback' => 'esc_url_raw',
+            'auth_callback'     => static fn(): bool => current_user_can('edit_posts'),
+        ]);
+    }
+
     private function redirectToUrl(): void
     {
         if (is_singular(PostType::PRESSREVIEW)) {
             $pressreviewUrl = get_post_meta(
                 get_the_ID(),
-                PressreviewMeta::PRESSREVIEW_URL,
+                PressreviewMeta::ARTICLE_URL->value,
                 true,
             );
 
@@ -171,7 +193,7 @@ class PressreviewController
         if (PostType::PRESSREVIEW === get_post_type($post)) {
             $pressreviewUrl = get_post_meta(
                 $post->ID,
-                PressreviewMeta::PRESSREVIEW_URL,
+                PressreviewMeta::ARTICLE_URL->value,
                 true,
             );
 
