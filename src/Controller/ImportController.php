@@ -24,6 +24,7 @@ class ImportController
             get_option(Option::IMPORT_ERORRS->value),
             [
                 'time' => 0,
+                'dismissed' => false,
                 'imported' => 0,
                 'feedErrors' => [],
                 'articleErrors' => [],

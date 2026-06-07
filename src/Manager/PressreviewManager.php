@@ -145,6 +145,7 @@ class PressreviewManager
             Option::IMPORT_ERORRS->value,
             [
                 'time'          => $importResult->getTimestamp(),
+                'dismissed' => false,
                 'datetime' => $importResult->getDateTime(),
                 'feedErrors'    => $importResult->feedErrors,
                 'articleErrors' => $importResult->articleErrors,
