@@ -200,6 +200,7 @@ class PressreviewManager
         $sources[] = new Source('https://www.frankenfernsehen.tv/mediathek/kategorie/sport/1-fc-nuernberg/feed/');
         $sources[] = new Source('https://www.bild.de/feed/nuernberg.xml');
         $sources[] = new Source('https://www.nordbayern.de/sport/1-fc-nuernberg?isRss=true');
+        $sources[] = new Source('https://www.nn.de/sport/1-fc-nuernberg?isRss=true');
         $sources[] = new Source('https://newsfeed.kicker.de/team/1fcnuernberg');
         $sources[] = new Source('https://www.n-town.de/glubbblog/index.php/feed');
         $sources[] = new Source('https://www.fcn.de/rss.xml');
