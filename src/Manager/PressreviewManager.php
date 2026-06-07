@@ -210,6 +210,13 @@ class PressreviewManager
             'https://www.youtube.com/feeds/videos.xml?channel_id=UCRFsyeKu07-LnHDG44O6uCA',
             fn(EntryInterface $item) => str_contains($this->mediaDescription($item), '#1FCNürnberg')
         );
+        // Liga-Zwei.de tags every entry as "Allgemein", so categories are
+        // useless for filtering. Article titles follow a "Verein: Schlagzeile"
+        // scheme, so the club is matched via the title prefix instead.
+        $sources[] = new Source(
+            'https://www.liga-zwei.de/feed/',
+            fn(EntryInterface $item) => str_starts_with(trim($item->getTitle()), '1. FC Nürnberg')
+        );
 
         return apply_filters('fcnp_sources', $sources);
     }
