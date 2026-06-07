@@ -4,7 +4,6 @@ namespace FCNPressespiegel\Models;
 
 readonly class ImportResult implements \JsonSerializable
 {
-
     private int $timestamp;
 
     /**
@@ -22,7 +21,7 @@ readonly class ImportResult implements \JsonSerializable
         return [
             'articles' => $this->articles,
             'feedErrors' => $this->feedErrors,
-            'articleErrors' => $this->articleErrors
+            'articleErrors' => $this->articleErrors,
         ];
     }
 

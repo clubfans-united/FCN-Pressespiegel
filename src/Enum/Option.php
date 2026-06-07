@@ -2,7 +2,7 @@
 
 namespace FCNPressespiegel\Enum;
 
-enum Option : string
+enum Option: string
 {
     case CRONJOB_ENABLED = '_fcnp_cronjob_enabled';
 

@@ -2,6 +2,4 @@
 
 namespace FCNPressespiegel\Exceptions;
 
-class PostNotFoundException extends \Exception
-{
-}
+class PostNotFoundException extends \Exception {}

@@ -91,12 +91,12 @@ class PressreviewCommand extends WP_CLI_Command
     {
         $ids = (new WP_Query(
             [
-            'post_type'      => PostType::PRESSREVIEW,
-            'post_status'    => 'any',
-            'posts_per_page' => -1,
-            'fields'         => 'ids',
-            'no_found_rows'  => true,
-            ]
+                'post_type'      => PostType::PRESSREVIEW,
+                'post_status'    => 'any',
+                'posts_per_page' => -1,
+                'fields'         => 'ids',
+                'no_found_rows'  => true,
+            ],
         ))->posts;
 
         $count = count($ids);

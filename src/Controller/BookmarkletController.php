@@ -89,7 +89,7 @@ class BookmarkletController
 
         $wp_styles->queue = array_filter(
             $wp_styles->queue,
-            fn($style) => str_contains($style, 'fcnp-pressreview-this')
+            fn($style) => str_contains($style, 'fcnp-pressreview-this'),
         );
     }
 
@@ -105,7 +105,7 @@ class BookmarkletController
 
         if (!current_user_can('edit_posts')) {
             /**
- * @noinspection ForgottenDebugOutputInspection 
+ * @noinspection ForgottenDebugOutputInspection
 */
             wp_die(__('Kommst Du aus der Westvorstadt?', 'fcn-pressespiegel'));
         }
@@ -116,86 +116,88 @@ class BookmarkletController
     private function registerRestRoute(): void
     {
         register_rest_route(
-            'fcnpressespiegel/v1', '/pressreview/add', [
-            'methods' => 'POST',
-            'callback' => static function (WP_REST_Request $request): WP_REST_Response {
-                $response = new WP_REST_Response();
+            'fcnpressespiegel/v1',
+            '/pressreview/add',
+            [
+                'methods' => 'POST',
+                'callback' => static function (WP_REST_Request $request): WP_REST_Response {
+                    $response = new WP_REST_Response();
 
-                if (!current_user_can('edit_posts')) {
-                    $response->set_status(401);
-                    return $response;
-                }
+                    if (!current_user_can('edit_posts')) {
+                        $response->set_status(401);
+                        return $response;
+                    }
 
-                $title = $request->get_param('title');
-                $description = $request->get_param('description');
-                $url = $request->get_param('url');
-                $tags = $request->get_param('tags');
+                    $title = $request->get_param('title');
+                    $description = $request->get_param('description');
+                    $url = $request->get_param('url');
+                    $tags = $request->get_param('tags');
 
-                $pressreviewManager = new PressreviewManager();
+                    $pressreviewManager = new PressreviewManager();
 
-                try {
-                    $article = ArticleFactory::create($title, $url, $description, new \DateTime());
-                    $post = $pressreviewManager->importArticle($article, $tags);
-                    $response->set_data($post);
-                } catch (DuplicatePressreviewPostException $exception) {
-                    $response->set_status(409);
-                    $response->set_data(
-                        [
-                        'message' => $exception->getMessage(),
-                        ]
-                    );
-                } catch (\Exception $exception) {
-                    $response->set_status(500);
-                    $response->set_data(
-                        [
-                        'message' => $exception->getMessage(),
-                        ]
-                    );
-                }
-
-                return $response;
-            },
-            'permission_callback' => function () {
-                return current_user_can('manage_options') ||
-                    current_user_can('edit_posts');
-            },
-            'args' => [
-                'title' => [
-                    'validate_callback' => function ($param) {
-                        return !empty($param);
-                    },
-                    'required' => true,
-                    'description' => 'the tile',
-                    'type' => 'string',
-                    'sanitize_callback' => 'sanitize_text_field',
-                ],
-                'description' => [
-                    'validate_callback' => function ($param) {
-                        return !empty($param);
-                    },
-                    'required' => true,
-                    'description' => 'the title',
-                    'type' => 'string',
-                    'sanitize_callback' => 'sanitize_text_field',
-                ],
-                'url' => [
-                    'validate_callback' => function ($param) {
-                        return !(
-                            filter_var($param, FILTER_VALIDATE_URL) === false
+                    try {
+                        $article = ArticleFactory::create($title, $url, $description, new \DateTime());
+                        $post = $pressreviewManager->importArticle($article, $tags);
+                        $response->set_data($post);
+                    } catch (DuplicatePressreviewPostException $exception) {
+                        $response->set_status(409);
+                        $response->set_data(
+                            [
+                                'message' => $exception->getMessage(),
+                            ],
                         );
-                    },
-                    'required' => true,
-                    'description' => 'the url',
-                    'type' => 'string',
-                    'sanitize_callback' => 'sanitize_text_field',
-                ],
-                'tags' => [
-                    'required' => false,
-                    'description' => 'the tags',
-                    'type' => 'array',
+                    } catch (\Exception $exception) {
+                        $response->set_status(500);
+                        $response->set_data(
+                            [
+                                'message' => $exception->getMessage(),
+                            ],
+                        );
+                    }
+
+                    return $response;
+                },
+                'permission_callback' => function () {
+                    return current_user_can('manage_options')
+                        || current_user_can('edit_posts');
+                },
+                'args' => [
+                    'title' => [
+                        'validate_callback' => function ($param) {
+                            return !empty($param);
+                        },
+                        'required' => true,
+                        'description' => 'the tile',
+                        'type' => 'string',
+                        'sanitize_callback' => 'sanitize_text_field',
+                    ],
+                    'description' => [
+                        'validate_callback' => function ($param) {
+                            return !empty($param);
+                        },
+                        'required' => true,
+                        'description' => 'the title',
+                        'type' => 'string',
+                        'sanitize_callback' => 'sanitize_text_field',
+                    ],
+                    'url' => [
+                        'validate_callback' => function ($param) {
+                            return !(
+                                filter_var($param, FILTER_VALIDATE_URL) === false
+                            );
+                        },
+                        'required' => true,
+                        'description' => 'the url',
+                        'type' => 'string',
+                        'sanitize_callback' => 'sanitize_text_field',
+                    ],
+                    'tags' => [
+                        'required' => false,
+                        'description' => 'the tags',
+                        'type' => 'array',
+                    ],
                 ],
             ],
-            ]
         );
     }
 
@@ -214,7 +216,7 @@ class BookmarkletController
             __('Bookmarklet', 'fcn-pressespiegel'),
             $capability,
             'fcnp-bookmarklet',
-            $this->renderPage(...)
+            $this->renderPage(...),
         );
     }
 
@@ -226,7 +228,7 @@ class BookmarkletController
             static function () {
                 echo '<p>' . esc_html(__('Diesen Link/Button in die Browser-Bookmarkleiste ziehen:', 'fcn-pressespiegel')) . '</p>';
             },
-            'fcnp-bookmarklet'
+            'fcnp-bookmarklet',
         );
 
         add_settings_field(
@@ -251,7 +253,7 @@ class BookmarkletController
                 HTML;
             },
             'fcnp-bookmarklet',
-            'fcnp_bookmarklet'
+            'fcnp_bookmarklet',
         );
     }
 

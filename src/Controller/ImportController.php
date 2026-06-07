@@ -27,7 +27,7 @@ class ImportController
                 'imported' => 0,
                 'feedErrors' => [],
                 'articleErrors' => [],
-            ]
+            ],
         );
 
         $feedErrors = (array) $importErrors['feedErrors'];
@@ -47,14 +47,14 @@ class ImportController
                 $items .= sprintf(
                     '<li><code>%s</code> — %s</li>',
                     esc_html((string) $url),
-                    esc_html((string) $message)
+                    esc_html((string) $message),
                 );
             }
 
             return sprintf(
                 '<p><strong>%s</strong></p><ul style="list-style:disc;margin-left:2em;">%s</ul>',
                 esc_html($heading),
-                $items
+                $items,
             );
         };
 
@@ -63,7 +63,7 @@ class ImportController
             esc_html__('FCN Pressespiegel: Beim letzten Import sind Fehler aufgetreten.', 'fcn-pressespiegel'),
             empty($importErrors['time'])
                 ? ''
-                : ' <em>(' . esc_html(wp_date('d.m.Y H:i', (int) $importErrors['time'])) . ')</em>'
+                : ' <em>(' . esc_html(wp_date('d.m.Y H:i', (int) $importErrors['time'])) . ')</em>',
         );
 
         $message = $headline
@@ -71,11 +71,12 @@ class ImportController
             . $section(__('Fehlgeschlagene Artikel:', 'fcn-pressespiegel'), $articleErrors);
 
         wp_admin_notice(
-            $message, [
-            'type' => 'warning',
-            'dismissible' => true,
-            'paragraph_wrap' => false,
-            ]
+            $message,
+            [
+                'type' => 'warning',
+                'dismissible' => true,
+                'paragraph_wrap' => false,
+            ],
         );
     }
 }

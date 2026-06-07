@@ -45,10 +45,11 @@ class PressreviewManager
                 add_action('http_api_curl', $forceIpv4);
 
                 $feedResponse = wp_remote_get(
-                    $source->getUrl(), [
-                    'timeout' => 15,
-                    'user-agent' => $userAgent,
-                    ]
+                    $source->getUrl(),
+                    [
+                        'timeout' => 15,
+                        'user-agent' => $userAgent,
+                    ],
                 );
 
                 if (is_wp_error($feedResponse)) {
@@ -125,28 +126,30 @@ class PressreviewManager
 
         $importResult = new ImportResult($articles, $feedErrors, $articleErrors);
 
-        if($importResult->hasErrors()) {
+        if ($importResult->hasErrors()) {
             do_action('fcnp_import_failed', $importResult);
 
-            foreach($importResult->articleErrors as $url => $message) {
+            foreach ($importResult->articleErrors as $url => $message) {
                 do_action('fcnp_import_article_failed', $url, $message);
                 error_log(sprintf('FCN-Pressespiegel: error importing article %s: %s', $url, $message));
 
             }
 
-            foreach($importResult->feedErrors as $url => $message) {
+            foreach ($importResult->feedErrors as $url => $message) {
                 do_action('fcnp_import_feed_failed', $url, $message);
                 error_log(sprintf('FCN-Pressespiegel: error importing feed %s: %s', $url, $message));
             }
         }
 
         update_option(
-            Option::IMPORT_ERORRS->value, [
-            'time'          => $importResult->getTimestamp(),
-            'datetime' => $importResult->getDateTime(),
-            'feedErrors'    => $importResult->feedErrors,
-            'articleErrors' => $importResult->articleErrors,
-            ], false
+            Option::IMPORT_ERORRS->value,
+            [
+                'time'          => $importResult->getTimestamp(),
+                'datetime' => $importResult->getDateTime(),
+                'feedErrors'    => $importResult->feedErrors,
+                'articleErrors' => $importResult->articleErrors,
+            ],
+            false,
         );
 
         do_action('fcnp_import_done', $importResult);
@@ -192,11 +195,11 @@ class PressreviewManager
         $url = trim($url);
         $query = new WP_Query(
             [
-            'post_type' => PostType::PRESSREVIEW,
-            'post_status' => 'publish',
-            'meta_key' => PressreviewMeta::ARTICLE_URL->value,
-            'meta_value' => $url,
-            ]
+                'post_type' => PostType::PRESSREVIEW,
+                'post_status' => 'publish',
+                'meta_key' => PressreviewMeta::ARTICLE_URL->value,
+                'meta_value' => $url,
+            ],
         );
 
         wp_cache_set($key, $query->found_posts > 0 ? '1' : '0', 'fcnp');
@@ -215,14 +218,14 @@ class PressreviewManager
     {
         $latest = new WP_Query(
             [
-            'post_type' => PostType::PRESSREVIEW,
-            'post_status' => 'publish',
-            'posts_per_page' => 1,
-            'orderby' => 'date',
-            'order' => 'DESC',
-            'no_found_rows' => true,
-            'fields' => 'ids',
-            ]
+                'post_type' => PostType::PRESSREVIEW,
+                'post_status' => 'publish',
+                'posts_per_page' => 1,
+                'orderby' => 'date',
+                'order' => 'DESC',
+                'no_found_rows' => true,
+                'fields' => 'ids',
+            ],
         );
 
         if (empty($latest->posts)) {
@@ -252,14 +255,14 @@ class PressreviewManager
         $sources[] = new Source('https://clubfokus.de/feed/');
         $sources[] = new Source(
             'https://www.youtube.com/feeds/videos.xml?channel_id=UCRFsyeKu07-LnHDG44O6uCA',
-            fn(EntryInterface $item) => str_contains($this->mediaDescription($item), '#1FCNürnberg')
+            fn(EntryInterface $item) => str_contains($this->mediaDescription($item), '#1FCNürnberg'),
         );
         // Liga-Zwei.de tags every entry as "Allgemein", so categories are
         // useless for filtering. Article titles follow a "Verein: Schlagzeile"
         // scheme, so the club is matched via the title prefix instead.
         $sources[] = new Source(
             'https://www.liga-zwei.de/feed/',
-            fn(EntryInterface $item) => str_starts_with(trim($item->getTitle()), '1. FC Nürnberg')
+            fn(EntryInterface $item) => str_starts_with(trim($item->getTitle()), '1. FC Nürnberg'),
         );
 
         return apply_filters('fcnp_sources', $sources);

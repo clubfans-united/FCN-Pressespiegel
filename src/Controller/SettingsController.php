@@ -35,7 +35,7 @@ class SettingsController
             __('Einstellungen', 'fcn-pressespiegel'),
             $capability,
             self::MENU_SLUG,
-            $this->renderPage(...)
+            $this->renderPage(...),
         );
     }
 
@@ -50,7 +50,7 @@ class SettingsController
                     return $value ? '1' : '0';
                 },
                 'default' => '1',
-            ]
+            ],
         );
 
         register_setting(
@@ -60,14 +60,14 @@ class SettingsController
                 'type' => 'integer',
                 'sanitize_callback' => 'absint',
                 'default' => 9,
-            ]
+            ],
         );
 
         add_settings_section(
             self::SETTINGS_SECTION,
             '',
             '__return_false',
-            self::MENU_SLUG
+            self::MENU_SLUG,
         );
 
         add_settings_field(
@@ -75,7 +75,7 @@ class SettingsController
             __('Automatisch importieren', 'fcn-pressespiegel'),
             $this->renderCronjobEnabledField(...),
             self::MENU_SLUG,
-            self::SETTINGS_SECTION
+            self::SETTINGS_SECTION,
         );
 
         add_settings_field(
@@ -83,7 +83,7 @@ class SettingsController
             __('Ausblenden', 'fcn-pressespiegel'),
             $this->renderHideOlderThenDays(...),
             self::MENU_SLUG,
-            self::SETTINGS_SECTION
+            self::SETTINGS_SECTION,
         );
     }
 
