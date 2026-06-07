@@ -36,8 +36,14 @@ class PressreviewManager
 
         do_action('fcnp_import_feeds_total', count($sources));
 
+        $forceIpv4 = static function ($handle): void {
+            curl_setopt($handle, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_V4);
+        };
+
         foreach ($sources as $source) {
             try {
+                add_action('http_api_curl', $forceIpv4);
+
                 $feedResponse = wp_remote_get(
                     $source->getUrl(), [
                     'timeout' => 15,
@@ -90,6 +96,7 @@ class PressreviewManager
                 do_action('fcnp_feed_exception', $exception);
                 $feedErrors[$source->getUrl()] = $exception->getMessage();
             } finally {
+                remove_action('http_api_curl', $forceIpv4);
                 do_action('fcnp_import_feed_done', $source->getUrl());
             }
         }
