@@ -104,7 +104,9 @@ class BookmarkletController
         }
 
         if (!current_user_can('edit_posts')) {
-            /** @noinspection ForgottenDebugOutputInspection */
+            /**
+ * @noinspection ForgottenDebugOutputInspection 
+*/
             wp_die(__('Kommst Du aus der Westvorstadt?', 'fcn-pressespiegel'));
         }
 
@@ -113,7 +115,8 @@ class BookmarkletController
 
     private function registerRestRoute(): void
     {
-        register_rest_route('fcnpressespiegel/v1', '/pressreview/add', [
+        register_rest_route(
+            'fcnpressespiegel/v1', '/pressreview/add', [
             'methods' => 'POST',
             'callback' => static function (WP_REST_Request $request): WP_REST_Response {
                 $response = new WP_REST_Response();
@@ -136,14 +139,18 @@ class BookmarkletController
                     $response->set_data($post);
                 } catch (DuplicatePressreviewPostException $exception) {
                     $response->set_status(409);
-                    $response->set_data([
+                    $response->set_data(
+                        [
                         'message' => $exception->getMessage(),
-                    ]);
+                        ]
+                    );
                 } catch (\Exception $exception) {
                     $response->set_status(500);
-                    $response->set_data([
+                    $response->set_data(
+                        [
                         'message' => $exception->getMessage(),
-                    ]);
+                        ]
+                    );
                 }
 
                 return $response;
@@ -188,7 +195,8 @@ class BookmarkletController
                     'type' => 'array',
                 ],
             ],
-        ]);
+            ]
+        );
     }
 
     private function isPressreviewAdd(): bool

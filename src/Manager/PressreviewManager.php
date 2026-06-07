@@ -3,6 +3,7 @@
 namespace FCNPressespiegel\Manager;
 
 use Carbon\Carbon;
+use FCNPressespiegel\Enum\Option;
 use FCNPressespiegel\Enum\PostType;
 use FCNPressespiegel\Enum\PressreviewMeta;
 use FCNPressespiegel\Exceptions\DuplicatePressreviewPostException;
@@ -29,16 +30,20 @@ class PressreviewManager
         $articles = [];
         $articleErrors = [];
 
-        // Lower bound that moves forward with each import: the publish date of
-        // the newest existing article. Null when there are no articles yet, in
-        // which case everything available in the feeds is imported.
+        $version = get_file_data(FCNP_PLUGIN_FILE, ['Version' => 'Version'])['Version'] ?: 'dev';
+        $userAgent = apply_filters('fcnp_feed_user_agent', 'FCN-Pressespiegel/' . $version);
         $importSince = $this->latestArticleTimestamp();
 
         do_action('fcnp_import_feeds_total', count($sources));
 
         foreach ($sources as $source) {
             try {
-                $feedResponse = wp_remote_get($source->getUrl());
+                $feedResponse = wp_remote_get(
+                    $source->getUrl(), [
+                    'timeout' => 15,
+                    'user-agent' => $userAgent,
+                    ]
+                );
 
                 if (is_wp_error($feedResponse)) {
                     throw new Exception($feedResponse->get_error_message());
@@ -84,7 +89,6 @@ class PressreviewManager
             } catch (Exception $exception) {
                 do_action('fcnp_feed_exception', $exception);
                 $feedErrors[$source->getUrl()] = $exception->getMessage();
-                error_log($exception->getMessage());
             } finally {
                 do_action('fcnp_import_feed_done', $source->getUrl());
             }
@@ -111,7 +115,35 @@ class PressreviewManager
             }
         }
 
-        return new ImportResult($articles, $feedErrors, $articleErrors);
+
+        $importResult = new ImportResult($articles, $feedErrors, $articleErrors);
+
+        if($importResult->hasErrors()) {
+            do_action('fcnp_import_failed', $importResult);
+
+            foreach($importResult->articleErrors as $url => $message) {
+                do_action('fcnp_import_article_failed', $url, $message);
+                error_log(sprintf('FCN-Pressespiegel: error importing article %s: %s', $url, $message));
+
+            }
+
+            foreach($importResult->feedErrors as $url => $message) {
+                do_action('fcnp_import_feed_failed', $url, $message);
+                error_log(sprintf('FCN-Pressespiegel: error importing feed %s: %s', $url, $message));
+            }
+        }
+
+        update_option(
+            Option::IMPORT_ERORRS->value, [
+            'time'          => $importResult->getTimestamp(),
+            'datetime' => $importResult->getDateTime(),
+            'feedErrors'    => $importResult->feedErrors,
+            'articleErrors' => $importResult->articleErrors,
+            ], false
+        );
+
+        do_action('fcnp_import_done', $importResult);
+        return $importResult;
     }
 
     /**
@@ -151,12 +183,14 @@ class PressreviewManager
         }
 
         $url = trim($url);
-        $query = new WP_Query([
+        $query = new WP_Query(
+            [
             'post_type' => PostType::PRESSREVIEW,
             'post_status' => 'publish',
             'meta_key' => PressreviewMeta::ARTICLE_URL->value,
             'meta_value' => $url,
-        ]);
+            ]
+        );
 
         wp_cache_set($key, $query->found_posts > 0 ? '1' : '0', 'fcnp');
 
@@ -172,7 +206,8 @@ class PressreviewManager
      */
     private function latestArticleTimestamp(): ?int
     {
-        $latest = new WP_Query([
+        $latest = new WP_Query(
+            [
             'post_type' => PostType::PRESSREVIEW,
             'post_status' => 'publish',
             'posts_per_page' => 1,
@@ -180,7 +215,8 @@ class PressreviewManager
             'order' => 'DESC',
             'no_found_rows' => true,
             'fields' => 'ids',
-        ]);
+            ]
+        );
 
         if (empty($latest->posts)) {
             return null;

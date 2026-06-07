@@ -12,5 +12,6 @@ class PluginController
         CronController::init();
         BookmarkletController::init();
         SettingsController::init();
+        ImportController::init();
     }
 }

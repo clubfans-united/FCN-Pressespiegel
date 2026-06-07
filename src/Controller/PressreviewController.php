@@ -59,10 +59,12 @@ class PressreviewController
             $assets['version'],
         );
 
-        wp_localize_script('pressreview-edit', 'pressreviewEdit', [
+        wp_localize_script(
+            'pressreview-edit', 'pressreviewEdit', [
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'ajaxNonce' => wp_create_nonce('fcnp_import'),
-        ]);
+            ]
+        );
     }
 
     private function addButton($views): array
@@ -112,23 +114,27 @@ class PressreviewController
 
     private function registerPostMeta(): void
     {
-        register_post_meta(PostType::PRESSREVIEW, PressreviewMeta::ARTICLE_URL->value, [
+        register_post_meta(
+            PostType::PRESSREVIEW, PressreviewMeta::ARTICLE_URL->value, [
             'type'              => 'string',
             'single'            => true,
             'show_in_rest'      => true,
             'description'       => 'Externe Artikel-URL des Presseartikels',
             'sanitize_callback' => 'esc_url_raw',
             'auth_callback'     => static fn(): bool => current_user_can('edit_posts'),
-        ]);
+            ]
+        );
 
-        register_post_meta(PostType::PRESSREVIEW, PressreviewMeta::SOURCE_URL->value, [
+        register_post_meta(
+            PostType::PRESSREVIEW, PressreviewMeta::SOURCE_URL->value, [
             'type'              => 'string',
             'single'            => true,
             'show_in_rest'      => true,
             'description'       => 'Feed-/Quellen-URL, aus der der Presseartikel importiert wurde',
             'sanitize_callback' => 'esc_url_raw',
             'auth_callback'     => static fn(): bool => current_user_can('edit_posts'),
-        ]);
+            ]
+        );
     }
 
     private function redirectToUrl(): void

@@ -89,13 +89,15 @@ class PressreviewCommand extends WP_CLI_Command
      */
     public function delete(array $args, array $assocArgs): void
     {
-        $ids = (new WP_Query([
+        $ids = (new WP_Query(
+            [
             'post_type'      => PostType::PRESSREVIEW,
             'post_status'    => 'any',
             'posts_per_page' => -1,
             'fields'         => 'ids',
             'no_found_rows'  => true,
-        ]))->posts;
+            ]
+        ))->posts;
 
         $count = count($ids);
 
