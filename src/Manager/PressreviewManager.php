@@ -181,6 +181,8 @@ class PressreviewManager
         wp_set_object_terms($postId, $tags, 'post_tag');
         update_post_meta($postId, PressreviewMeta::ARTICLE_URL->value, $article->getUrl());
 
+        do_action('fcnp_after_import_article', $article, $postId);
+
         return Pressreview::createFromPostId($postId);
     }
 
