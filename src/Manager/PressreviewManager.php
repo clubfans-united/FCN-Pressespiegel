@@ -104,20 +104,9 @@ class PressreviewManager
 
         foreach ($articles as $article) {
             try {
-                $postData = [
-                    'comment_status' => 'closed',
-                    'post_title' => $article->getDisplayTitle(),
-                    'post_content' => '',
-                    'post_status' => 'publish',
-                    'ping_status' => 'closed',
-                    'post_type' => PostType::PRESSREVIEW,
-                    'post_date' => $article->getCreated()->format('Y-m-d H:i:s'),
-                ];
-
-                $postId = wp_insert_post($postData);
-
-                update_post_meta($postId, PressreviewMeta::ARTICLE_URL->value, $article->getUrl());
-                update_post_meta($postId, PressreviewMeta::SOURCE_URL->value, $article->getSourceUrl());
+                $this->importArticle($article);
+            } catch (DuplicatePressreviewPostException) {
+                // Inserted in the meantime (e.g. concurrent bookmarklet) – skip.
             } catch (Exception $e) {
                 $articleErrors[$article->getUrl()] = $e->getMessage();
             }
@@ -178,8 +167,16 @@ class PressreviewManager
         ];
 
         $postId = wp_insert_post($postData);
-        wp_set_object_terms($postId, $tags, 'post_tag');
+
+        if ($tags !== []) {
+            wp_set_object_terms($postId, $tags, 'post_tag');
+        }
+
         update_post_meta($postId, PressreviewMeta::ARTICLE_URL->value, $article->getUrl());
+
+        if ($article->getSourceUrl() !== '') {
+            update_post_meta($postId, PressreviewMeta::SOURCE_URL->value, $article->getSourceUrl());
+        }
 
         do_action('fcnp_after_import_article', $article, $postId);
 

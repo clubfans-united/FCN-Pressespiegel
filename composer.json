@@ -12,7 +12,10 @@
   ],
   "config": {
     "preferred-install": "dist",
-    "sort-packages": true
+    "sort-packages": true,
+    "platform": {
+      "php": "8.3.99"
+    }
   },
   "require": {
     "php": ">=8.3",
@@ -21,18 +24,26 @@
     "ozh/bookmarkletgen": "1.*"
   },
   "require-dev": {
+    "brain/monkey": "^2.7",
     "friendsofphp/php-cs-fixer": "^3.95",
     "kint-php/kint": "3.*",
+    "phpunit/phpunit": "^12.5",
     "roave/security-advisories": "dev-latest"
   },
   "scripts": {
     "test": [
-      "vendor/bin/php-cs-fixer check"
+      "vendor/bin/php-cs-fixer check",
+      "vendor/bin/phpunit"
     ]
   },
   "autoload": {
     "psr-4": {
       "FCNPressespiegel\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "FCNPressespiegel\\Tests\\": "tests/"
     }
   }
 }
