@@ -166,7 +166,11 @@ class PressreviewManager
             'post_date' => $article->getCreated()->format('Y-m-d H:i:s'),
         ];
 
+        $postData = apply_filters('fcnp_import_article_postarr', $postData, $article);
+
         $postId = wp_insert_post($postData);
+
+        $tags = apply_filters('fcnp_import_article_tags', $tags, $article);
 
         if ($tags !== []) {
             wp_set_object_terms($postId, $tags, 'post_tag');
