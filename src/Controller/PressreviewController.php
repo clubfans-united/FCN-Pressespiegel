@@ -26,6 +26,10 @@ class PressreviewController
         add_filter('wpseo_sitemap_exclude_post_type', $this->excludeFromSitemap(...), 10, 2);
         add_action('admin_enqueue_scripts', $this->enqueueScripts(...));
         add_action('wp_ajax_fcnp_import', $this->import(...));
+        add_action('admin_action_import', static function() {
+            $pressreviewManager = new PressreviewManager();
+            $pressreviewManager->import();
+        });
 
         if (class_exists('WP_CLI')) {
             WP_CLI::add_command('pressreview', PressreviewCommand::class);

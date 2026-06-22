@@ -5,6 +5,7 @@ namespace FCNPressespiegel\Controller;
 use FCNPressespiegel\Enum\Option;
 use FCNPressespiegel\Enum\PostType;
 use FCNPressespiegel\Manager\PressreviewManager;
+use FCNPressespiegel\Models\Article;
 
 class SettingsController
 {
@@ -23,6 +24,24 @@ class SettingsController
         $this->pressreviewManager = new PressreviewManager();
         add_action('admin_menu', $this->registerMenu(...));
         add_action('admin_init', $this->registerSettings(...));
+        add_filter('fcnp_import_article_postarr', $this->maybeStripExcerpt(...), 10, 2);
+    }
+
+    /**
+     * Der Auszug wird beim Import immer mitgeladen und als post_content
+     * gesetzt; ist die Einstellung deaktiviert, leeren wir ihn hier wieder,
+     * statt ihn gar nicht erst zu importieren.
+     *
+     * @param array<string, mixed> $postData
+     * @return array<string, mixed>
+     */
+    private function maybeStripExcerpt(array $postData, Article $article): array
+    {
+        if (get_option(Option::EXCERPT_ENABLED->value, '1') !== '1') {
+            $postData['post_content'] = '';
+        }
+
+        return $postData;
     }
 
     private function registerMenu(): void
@@ -63,6 +82,30 @@ class SettingsController
             ],
         );
 
+        register_setting(
+            self::SETTINGS_GROUP,
+            Option::AI_TAGGING_ENABLED->value,
+            [
+                'type' => 'boolean',
+                'sanitize_callback' => function ($value) {
+                    return $value ? '1' : '0';
+                },
+                'default' => '0',
+            ],
+        );
+
+        register_setting(
+            self::SETTINGS_GROUP,
+            Option::EXCERPT_ENABLED->value,
+            [
+                'type' => 'boolean',
+                'sanitize_callback' => function ($value) {
+                    return $value ? '1' : '0';
+                },
+                'default' => '1',
+            ],
+        );
+
         add_settings_section(
             self::SETTINGS_SECTION,
             '',
@@ -82,6 +125,22 @@ class SettingsController
             Option::HIDE_OLDER_THEN_DAYS->value,
             __('Ausblenden', 'fcn-pressespiegel'),
             $this->renderHideOlderThenDays(...),
+            self::MENU_SLUG,
+            self::SETTINGS_SECTION,
+        );
+
+        add_settings_field(
+            Option::AI_TAGGING_ENABLED->value,
+            __('KI-Verschlagwortung', 'fcn-pressespiegel'),
+            $this->renderAiTaggingEnabledField(...),
+            self::MENU_SLUG,
+            self::SETTINGS_SECTION,
+        );
+
+        add_settings_field(
+            Option::EXCERPT_ENABLED->value,
+            __('Textauszug', 'fcn-pressespiegel'),
+            $this->renderExcerptEnabledField(...),
             self::MENU_SLUG,
             self::SETTINGS_SECTION,
         );
@@ -142,6 +201,40 @@ class SettingsController
         echo <<<HTML
             <label for="$id">
                 <input type="number" id="$id" name="$id" min="1" max="100" value="$value" />
+                <p>
+                    $description
+                </p>
+            </label>
+        HTML;
+    }
+
+    private function renderAiTaggingEnabledField(): void
+    {
+        $value = get_option(Option::AI_TAGGING_ENABLED->value, '0');
+        $checked = checked('1', $value, false);
+        $id = esc_attr(Option::AI_TAGGING_ENABLED->value);
+        $description = esc_html(__('Importierte Artikel automatisch per KI verschlagworten (benötigt einen eingerichteten AI-Connector unter Einstellungen → Connectors).', 'fcn-pressespiegel'));
+
+        echo <<<HTML
+            <label for="$id">
+                <input type="checkbox" id="$id" name="$id" value="1" $checked />
+                <p>
+                    $description
+                </p>
+            </label>
+        HTML;
+    }
+
+    private function renderExcerptEnabledField(): void
+    {
+        $value = get_option(Option::EXCERPT_ENABLED->value, '1');
+        $checked = checked('1', $value, false);
+        $id = esc_attr(Option::EXCERPT_ENABLED->value);
+        $description = esc_html(__('Den Textauszug des Artikels im Pressespiegel-Beitrag ausgeben. Deaktiviert wird der Beitrag ohne Auszug gespeichert.', 'fcn-pressespiegel'));
+
+        echo <<<HTML
+            <label for="$id">
+                <input type="checkbox" id="$id" name="$id" value="1" $checked />
                 <p>
                     $description
                 </p>

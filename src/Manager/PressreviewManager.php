@@ -15,6 +15,9 @@ use FCNPressespiegel\Models\ImportResult;
 use FCNPressespiegel\Models\Source;
 use FCNPressespiegel\Posts\Pressreview;
 use Exception;
+use fivefilters\Readability\Configuration;
+use fivefilters\Readability\ParseException;
+use fivefilters\Readability\Readability;
 use Laminas\Feed\Reader\Entry\EntryInterface;
 use Laminas\Feed\Reader\Reader;
 use WP_Query;
@@ -86,11 +89,14 @@ class PressreviewManager
 
                     $dateCreated = Carbon::createFromTimestamp($timestampEntry);
 
+                    $content = $this->fetchArticleContent($item->getLink(), $userAgent);
+
                     $articles[] = ArticleFactory::create(
                         $item->getTitle(),
                         $item->getLink(),
-                        '',
+                        $item->getDescription() ?? '',
                         $dateCreated,
+                        $content,
                     )->setSourceUrl($source->getUrl());
                 }
             } catch (Exception $exception) {
@@ -144,6 +150,75 @@ class PressreviewManager
 
         do_action('fcnp_import_done', $importResult);
         return $importResult;
+    }
+
+    /**
+     * Fetches the linked article page and returns its readable text.
+     *
+     * The feed only carries a teaser; the full body is scraped from the
+     * article URL so downstream consumers (e.g. KI-Tagging) have more context.
+     * Readability isolates the article body from the surrounding navigation,
+     * menus and footer (the same algorithm as Firefox' reader view).
+     *
+     * Best effort only – any failure (network error or non-200) yields an
+     * empty string so the import is never blocked by it. When Readability
+     * cannot find an article body (JS-rendered single-page apps such as the
+     * Franken-Fernsehen mediathek, bot walls) it throws, and we fall back to
+     * the page's meta description (the teaser), which virtually every page
+     * exposes for SEO/social cards.
+     */
+    private function fetchArticleContent(string $url, string $userAgent): string
+    {
+        $response = wp_remote_get(
+            $url,
+            [
+                'timeout' => 15,
+                'user-agent' => $userAgent,
+            ],
+        );
+
+        if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
+            return '';
+        }
+
+        $html = wp_remote_retrieve_body($response);
+
+        try {
+            $readability = new Readability(new Configuration());
+            $readability->parse($html);
+        } catch (ParseException) {
+            return $this->metaDescription($html);
+        }
+
+        return trim(wp_strip_all_tags($readability->getContent(), true));
+    }
+
+    /**
+     * Extracts the meta description (og:description preferred, then the plain
+     * description) from a raw HTML document. Robust against attribute order.
+     */
+    private function metaDescription(string $html): string
+    {
+        if (!preg_match_all('/<meta\b[^>]*>/i', $html, $tags)) {
+            return '';
+        }
+
+        foreach (['og:description', 'description'] as $key) {
+            $attr = $key === 'description' ? 'name' : 'property';
+
+            foreach ($tags[0] as $tag) {
+                if (preg_match('/\b' . $attr . '=["\']' . preg_quote($key, '/') . '["\']/i', $tag)
+                    && preg_match('/\bcontent=["\']([^"\']*)["\']/i', $tag, $content)) {
+                    $text = trim(html_entity_decode($content[1], ENT_QUOTES | ENT_HTML5));
+
+                    if ($text !== '') {
+                        return $text;
+                    }
+                }
+            }
+        }
+
+        return '';
     }
 
     /**

@@ -13,5 +13,6 @@ class PluginController
         BookmarkletController::init();
         SettingsController::init();
         ImportController::init();
+        AIController::init();
     }
 }

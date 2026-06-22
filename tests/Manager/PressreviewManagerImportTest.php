@@ -230,6 +230,10 @@ class PressreviewManagerImportTest extends TestCase
         Functions\when('is_wp_error')->justReturn(false);
         Functions\when('wp_remote_get')->alias(static fn(string $url): array => ['body' => $feeds[$url] ?? '']);
         Functions\when('wp_remote_retrieve_body')->alias(static fn(array $response): string => $response['body']);
+        Functions\when('wp_remote_retrieve_response_code')->justReturn(200);
+        Functions\when('wp_strip_all_tags')->alias(
+            static fn(string $text): string => trim(preg_replace('/\s+/', ' ', strip_tags($text))),
+        );
         Functions\when('update_post_meta')->justReturn(true);
         Functions\when('update_option')->justReturn(true);
         Functions\when('wp_timezone')->alias(static fn(): \DateTimeZone => new \DateTimeZone('UTC'));

@@ -15,6 +15,8 @@ class Article implements JsonSerializable
 
     private string $excerpt;
 
+    private string $content = '';
+
     private DateTime $created;
 
     private string $host;
@@ -113,4 +115,16 @@ class Article implements JsonSerializable
     {
         return $this->host;
     }
+
+    public function getContent(): string
+    {
+        return $this->content;
+    }
+
+    public function setContent(string $content): Article
+    {
+        $this->content = $content;
+        return $this;
+    }
+
 }
