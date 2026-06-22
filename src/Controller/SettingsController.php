@@ -24,24 +24,6 @@ class SettingsController
         $this->pressreviewManager = new PressreviewManager();
         add_action('admin_menu', $this->registerMenu(...));
         add_action('admin_init', $this->registerSettings(...));
-        add_filter('fcnp_import_article_postarr', $this->maybeStripExcerpt(...), 10, 2);
-    }
-
-    /**
-     * Der Auszug wird beim Import immer mitgeladen und als post_content
-     * gesetzt; ist die Einstellung deaktiviert, leeren wir ihn hier wieder,
-     * statt ihn gar nicht erst zu importieren.
-     *
-     * @param array<string, mixed> $postData
-     * @return array<string, mixed>
-     */
-    private function maybeStripExcerpt(array $postData, Article $article): array
-    {
-        if (get_option(Option::EXCERPT_ENABLED->value, '1') !== '1') {
-            $postData['post_content'] = '';
-        }
-
-        return $postData;
     }
 
     private function registerMenu(): void
@@ -57,6 +39,7 @@ class SettingsController
             $this->renderPage(...),
         );
     }
+
 
     private function registerSettings(): void
     {
@@ -102,7 +85,7 @@ class SettingsController
                 'sanitize_callback' => function ($value) {
                     return $value ? '1' : '0';
                 },
-                'default' => '1',
+                'default' => '0',
             ],
         );
 
@@ -227,10 +210,10 @@ class SettingsController
 
     private function renderExcerptEnabledField(): void
     {
-        $value = get_option(Option::EXCERPT_ENABLED->value, '1');
+        $value = get_option(Option::EXCERPT_ENABLED->value, '0');
         $checked = checked('1', $value, false);
         $id = esc_attr(Option::EXCERPT_ENABLED->value);
-        $description = esc_html(__('Den Textauszug des Artikels im Pressespiegel-Beitrag ausgeben. Deaktiviert wird der Beitrag ohne Auszug gespeichert.', 'fcn-pressespiegel'));
+        $description = esc_html(__('Den Textauszug im Frontend ausgeben. Deaktiviert bleibt der Auszug gespeichert und im Editor sichtbar, wird aber nicht ausgegeben.', 'fcn-pressespiegel'));
 
         echo <<<HTML
             <label for="$id">

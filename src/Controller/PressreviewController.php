@@ -22,6 +22,7 @@ class PressreviewController
         add_action('pre_get_posts', $this->postsPerPage(...));
         add_filter('post_type_link', $this->pressreviewLink(...), 99, 2);
         add_filter('posts_where', $this->whereNotOlderThan(...), 10, 2);
+        add_filter('get_the_excerpt', $this->filterExcerptOutput(...), 10, 2);
         add_filter('query_vars', $this->addQueryVars(...));
         add_filter('wpseo_sitemap_exclude_post_type', $this->excludeFromSitemap(...), 10, 2);
         add_action('admin_enqueue_scripts', $this->enqueueScripts(...));
@@ -34,6 +35,21 @@ class PressreviewController
         if (class_exists('WP_CLI')) {
             WP_CLI::add_command('pressreview', PressreviewCommand::class);
         }
+    }
+
+    /**
+     * Filtert den Auszug NUR bei der Ausgabe (Frontend / Post-Excerpt-Block,
+     * der intern get_the_excerpt() nutzt). Bei deaktivierter Option bleibt der
+     * Auszug in der DB erhalten und im Editor (REST: excerpt.raw) sichtbar –
+     * er wird lediglich nicht mehr ausgegeben.
+     */
+    private function filterExcerptOutput(string $excerpt, ?\WP_Post $post = null): string
+    {
+        if ($post === null || $post->post_type !== PostType::PRESSREVIEW) {
+            return $excerpt;
+        }
+
+        return get_option(Option::EXCERPT_ENABLED->value, '0') === '1' ? $excerpt : '';
     }
 
     private function enqueueScripts($hook): void
@@ -94,7 +110,7 @@ class PressreviewController
             'public' => true,
             'exclude_from_search' => true,
             'rewrite' => ['slug' => 'pressespiegel', 'with_front' => true],
-            'supports' => ['title', 'editor', 'custom-fields'],
+            'supports' => ['title', 'editor', 'excerpt', 'custom-fields'],
             'menu_icon' => 'dashicons-media-document',
             'has_archive' => true,
             'taxonomies' => ['post_tag'],

@@ -41,23 +41,48 @@ class AIController
         $body = $article->getContent() !== '' ? $article->getContent() : $article->getExcerpt();
         $context = trim($article->getDisplayTitle() . "\n" . $body);
 
+
+        $prompt = <<<TXT
+            Du verschlagwortest deutschsprachige Nachrichten rund um den 1. FC Nürnberg (FCN). Gib 0 bis 3 Schlagworte zurück.
+
+            Getaggt wird:
+            - Personen mit Bezug zum FCN – aktuelle oder ehemalige Spieler, Trainer oder Funktionäre des Clubs. Nur den Nachnamen, nicht den Vornamen.
+            - Vereine im direkten FCN-Bezug (Gegner einer Partie, Transferpartner eines FCN-Spielers) als Twitter/X-Kürzel: Hamburger SV → HSV.
+
+            Nie getaggt wird:
+            - Der 1. FC Nürnberg selbst (kein „FCN"), da sich jeder Artikel um ihn dreht.
+            - Personen, die nur zu einem anderen Verein gehören – Zugänge, Gegner oder Trainer eines fremden Clubs –, auch wenn sie prominent im Text vorkommen.
+            - Vereine, die nur am Rande / in fremdem Kontext genannt werden (z. B. der abgebende Club bei einem Transfer, der nichts mit dem FCN zu tun hat).
+            - Die SpVgg Greuther Fürth. Einzige Ausnahme: das direkte Duell 1. FC Nürnberg gegen Greuther Fürth – dann SGFFCN oder FCNSGF.
+
+            Tagge ausschließlich Namen, die wörtlich im vorgelegten Artikeltext stehen – niemals Namen aus diesen Anweisungen oder den Beispielen unten. Im Zweifel nicht taggen. Nennt der Text niemanden und keinen Verein mit FCN-Bezug, gib eine leere Liste zurück. Keine Erklärungen.
+
+            Beispiele (nur zur Illustration – diese Namen nie selbst taggen):
+            - „Der FCN verpflichtet Stürmer Tim Müller." → ["Müller"]
+            - „Trainer Klose setzt im Heimspiel gegen den HSV auf eine Dreierkette." → ["Klose", "HSV"]
+            - „Greuther Fürth holt Shinta Appelkamp vom Absteiger Düsseldorf, Torhüter Hellstern kommt aus Stuttgart." → []
+            - „Frankenderby: Der 1. FC Nürnberg empfängt Greuther Fürth." → ["FCNSGF"]
+        TXT;
+
+        $prompt = apply_filters('fcnp_tags_ai_prompt', $prompt);
+
+
         $builder = wp_ai_client_prompt(sprintf(
             "Artikel über den 1. FC Nürnberg:\n%s",
             $context,
         ))
-            ->using_system_instruction(
-                'Du verschlagwortest deutschsprachige Nachrichten über den 1. FC Nürnberg. '
-                . 'Nur 1-3 Schlagworte und zwar nur Spielernamen, Trainernamen, und Funktionärsnamen, aber von denen nur die Nachnamen. Vereine als Twitter/X Kürzel taggen, z.B. Hamburger SV ist HSV. Den 1. FC Nürnberg selbst niemals taggen (kein eigenständiges FCN), da sich jeder Artikel um ihn dreht. Tagge niemals die SpVgg Greuther Fürth, ausser es Betrifft die Partie 1. FC Nürnberg gegen Greuther Fürth (also SGFFCN oder FCNSGF sind ok).'
-                . 'Keine Erklärungen.',
-            )
+            ->using_system_instruction($prompt)
             // Je ein günstiges Nicht-Reasoning-Modell pro Provider, in
             // Reihenfolge. Es greift das erste, das der aktive Connector
-            // anbietet; matcht keines, fällt der Client auf seinen Default
-            // zurück. Vermeidet die teuren/unzugänglichen „bestes Modell"-
-            // Defaults (Claude Fable 5, OpenAI o-Serie, Gemini-Thinking).
+            // anbietet. Nur ein Hinweis, kein Zwang: matcht keine der IDs
+            // (z. B. weil ein Modell umbenannt/abgekündigt wurde oder ein
+            // anderer Provider aktiv ist), greift die provider-eigene –
+            // ebenfalls günstig-orientierte – Sortierung (Anthropic→Sonnet,
+            // OpenAI→mini, Google→Flash). Gar kein Text-Modell beim aktiven
+            // Connector wirft eine Exception, die is_supported_for_text_
+            // generation() unten abfängt. Stale IDs hier sind also harmlos.
             ->using_model_preference(
                 'claude-haiku-4-5',
-                'claude-opus-4-8',
                 'gpt-4o-mini',
                 'gemini-2.5-flash-lite',
             )
@@ -95,7 +120,7 @@ class AIController
 
         $aiTags = $this->parseTags((string) $result);
 
-        return array_values(array_unique([...$tags, ...$aiTags]));
+        return apply_filters('fcnp_import_article_tags_ai', array_values(array_unique([...$tags, ...$aiTags])));
     }
 
     /**

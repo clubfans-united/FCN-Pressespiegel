@@ -89,8 +89,8 @@ class PressreviewManager
 
                     $dateCreated = Carbon::createFromTimestamp($timestampEntry);
 
-                    $content = $this->fetchArticleContent($item->getLink(), $userAgent);
-
+                    //$content = $this->fetchArticleContent($item->getLink(), $userAgent);
+                    $content = '';
                     $articles[] = ArticleFactory::create(
                         $item->getTitle(),
                         $item->getLink(),
@@ -234,7 +234,7 @@ class PressreviewManager
         $postData = [
             'comment_status' => 'closed',
             'post_title' => $article->getDisplayTitle(),
-            'post_content' => $article->getExcerpt(),
+            'post_excerpt' => $article->getExcerpt(),
             'post_status' => 'publish',
             'ping_status' => 'closed',
             'post_type' => PostType::PRESSREVIEW,
